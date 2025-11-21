@@ -175,12 +175,4 @@ Feel free to open issues for bugs, UI/UX improvements, or new ideas.
 
 This project is open-source under the **MIT License**.
 
----
 
-If you'd like, I can also:
-✔ Add GitHub badges (Live, Stars, License, Tech Stack)
-✔ Create a banner header for the repo
-✔ Add screenshots to the README
-✔ Add an "Installation GIF" or demo animation
-
-Tell me what you want!
