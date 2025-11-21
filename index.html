@@ -105,7 +105,7 @@
             transition: transform 0.1s ease-out;
         }
 
-        /* Animation Canvas */
+        /* Animation Canvas - FIXED: Higher z-index to appear over card */
         #canvas-wrapper {
             position: fixed;
             top: 0;
@@ -113,7 +113,7 @@
             width: 100%;
             height: 100%;
             z-index: 50; /* On top of everything */
-            pointer-events: none;
+            pointer-events: none; /* Click through */
         }
         
         /* Icons & Animations */
@@ -398,9 +398,10 @@
             let chartInstance = null;
             let canvasCtx = els.canvas.getContext('2d');
             let particles = [];
+            let activeBolts = []; // NEW: Store active bolts
             let animationId;
             let lightningAlpha = 0; // For flash
-            let activeWeatherType = 'cloudy'; // Tracking for loop
+            let activeWeatherType = null; // Tracking for loop
 
             let favorites = JSON.parse(localStorage.getItem('weatherFavorites')) || [];
 
@@ -457,6 +458,7 @@
                 window.requestAnimationFrame(step);
             }
 
+            // --- CANVAS ANIMATION ENGINE ---
             function resizeCanvas() { els.canvas.width = window.innerWidth; els.canvas.height = window.innerHeight; }
             window.addEventListener('resize', resizeCanvas);
             resizeCanvas();
@@ -471,7 +473,7 @@
                         opacity: Math.random() * 0.5 + 0.1,
                         type: type
                     };
-
+                    // ... existing particle setup ...
                     if(type === 'rain') {
                         p.length = Math.random() * 20 + 10;
                     }
@@ -488,15 +490,33 @@
                     else if (type === 'stars') {
                         p.size = Math.random() * 2 + 1;
                     }
-
                     particles.push(p);
                 }
+            }
+
+            // NEW: Create a persistent lightning bolt
+            function createBolt() {
+                const bolt = {
+                    points: [],
+                    opacity: 1,
+                    life: 10 // Frames to live
+                };
+                let x = Math.random() * els.canvas.width;
+                let y = 0;
+                bolt.points.push({x, y});
+                
+                while (y < els.canvas.height) {
+                    x += (Math.random() - 0.5) * 50; // Jaggedness
+                    y += Math.random() * 30 + 10; // Step down
+                    bolt.points.push({x, y});
+                }
+                activeBolts.push(bolt);
             }
 
             function animateParticles() {
                 canvasCtx.clearRect(0, 0, els.canvas.width, els.canvas.height);
                 
-                // Lightning Flash
+                // Lightning Flash (Background)
                 if (lightningAlpha > 0) {
                     canvasCtx.fillStyle = `rgba(255, 255, 255, ${lightningAlpha})`;
                     canvasCtx.fillRect(0, 0, els.canvas.width, els.canvas.height);
@@ -504,11 +524,35 @@
                 }
                 
                 // Random Lightning Trigger
-                if (activeWeatherType === 'thunder' && Math.random() < 0.005) {
-                    lightningAlpha = 0.4; // Set Flash brightness
-                    drawBolt(); // Draw Bolt one-off
+                if (activeWeatherType === 'thunder' && Math.random() < 0.01) { // 1% chance per frame
+                    lightningAlpha = 0.3; // Set Flash brightness
+                    createBolt(); 
+                    // Occasional double strike
+                    if(Math.random() < 0.3) setTimeout(createBolt, 150);
                 }
 
+                // Draw Active Bolts
+                if (activeBolts.length > 0) {
+                    canvasCtx.save();
+                    canvasCtx.shadowBlur = 15;
+                    canvasCtx.shadowColor = "white";
+                    for (let i = activeBolts.length - 1; i >= 0; i--) {
+                        const b = activeBolts[i];
+                        canvasCtx.beginPath();
+                        canvasCtx.strokeStyle = `rgba(255, 255, 255, ${b.opacity})`;
+                        canvasCtx.lineWidth = 2;
+                        if(b.points.length > 0) {
+                            canvasCtx.moveTo(b.points[0].x, b.points[0].y);
+                            for(let pt of b.points) canvasCtx.lineTo(pt.x, pt.y);
+                            canvasCtx.stroke();
+                        }
+                        b.opacity -= 0.1; // Bolt fade speed
+                        if (b.opacity <= 0) activeBolts.splice(i, 1);
+                    }
+                    canvasCtx.restore();
+                }
+
+                // Draw Particles (Rain, Snow, etc)
                 particles.forEach(p => {
                     canvasCtx.beginPath();
                     if (p.type === 'rain') {
@@ -524,7 +568,7 @@
                         canvasCtx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
                         canvasCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                         canvasCtx.fill();
-                        p.y += p.speed; 
+                        p.y += p.speed * 0.3; 
                         p.x += Math.sin(p.y * 0.01) * 0.5; 
                         if (p.y > els.canvas.height) { p.y = -5; p.x = Math.random() * els.canvas.width; }
                     }
@@ -554,21 +598,6 @@
                     animationId = requestAnimationFrame(animateParticles);
                 }
             }
-            
-            function drawBolt() {
-                let x = Math.random() * els.canvas.width;
-                let y = 0;
-                canvasCtx.beginPath();
-                canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-                canvasCtx.lineWidth = 3;
-                canvasCtx.moveTo(x, y);
-                while (y < els.canvas.height) {
-                    x += (Math.random() - 0.5) * 50;
-                    y += Math.random() * 30 + 10;
-                    canvasCtx.lineTo(x, y);
-                }
-                canvasCtx.stroke();
-            }
 
             function setVisuals(icon, isDay) {
                 const classes = document.body.className.split(' ').filter(c => !c.startsWith('weather-'));
@@ -577,13 +606,14 @@
                 cancelAnimationFrame(animationId);
                 canvasCtx.clearRect(0, 0, els.canvas.width, els.canvas.height);
                 particles = [];
+                activeBolts = []; // Clear bolts
                 els.cloudsCont.innerHTML = ''; 
-                lightningAlpha = 0; // Reset flash
+                lightningAlpha = 0; 
+                activeWeatherType = null; 
 
                 let bgClass = 'weather-cloudy';
                 let animType = null;
                 let animCount = 0;
-                activeWeatherType = null; // Reset
 
                 if (icon === 'sunny') {
                     bgClass = 'weather-sunny';
@@ -593,10 +623,11 @@
                         animType = 'particles'; animCount = 60;
                     }
                 } 
-                else if (icon === 'rain' || icon === 'thunderstorm') {
-                    bgClass = icon === 'thunderstorm' ? 'weather-thunder' : 'weather-rain';
+                // FIX: Check for 'thunder' (the mapped key), NOT 'thunderstorm'
+                else if (icon === 'rain' || icon === 'thunder') {
+                    bgClass = icon === 'thunder' ? 'weather-thunder' : 'weather-rain';
                     animType = 'rain'; animCount = 150;
-                    if (icon === 'thunderstorm') activeWeatherType = 'thunder';
+                    if (icon === 'thunder') activeWeatherType = 'thunder';
                 }
                 else if (icon === 'snow') {
                     bgClass = 'weather-snow';
@@ -617,7 +648,7 @@
                     }
                 }
                 else if (icon === 'fog') {
-                    bgClass = 'weather-cloudy'; // Fog base
+                    bgClass = 'weather-cloudy'; 
                     animType = 'fog'; animCount = 30;
                 }
 
