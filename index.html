@@ -28,7 +28,7 @@
             overscroll-behavior-y: none;
         }
 
-        /* Noise Texture for Realism */
+        /* Noise Texture */
         .bg-noise {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -56,6 +56,8 @@
             --suggestion-hover: #e2e8f0;
             --radar-border: rgba(0, 0, 0, 0.1);
             --chart-grid: rgba(0, 0, 0, 0.05);
+            --chart-fill: rgba(255, 255, 255, 0.3);
+            --moon-color: #FDB813;
         }
 
         /* --- Night Mode --- */
@@ -68,6 +70,7 @@
             --text-secondary: #94A3B8;
             --icon-fill: #F1F5F9;
             --input-bg: rgba(15, 23, 42, 0.6);
+            --input-placeholder: rgba(148, 163, 184, 0.6);
             --button-bg: rgba(255, 255, 255, 0.1);
             --button-hover: rgba(255, 255, 255, 0.15);
             --detail-bg: rgba(15, 23, 42, 0.4);
@@ -75,6 +78,8 @@
             --suggestion-hover: #334155;
             --radar-border: rgba(255, 255, 255, 0.1);
             --chart-grid: rgba(255, 255, 255, 0.05);
+            --chart-fill: rgba(148, 163, 184, 0.2);
+            --moon-color: #FDB813;
         }
         
         /* Dynamic Weather Backgrounds */
@@ -89,7 +94,7 @@
         body.weather-thunder.day-mode { --bg-gradient-start: #4c1d95; --bg-gradient-end: #8b5cf6; }
         body.weather-thunder.night-mode { --bg-gradient-start: #2e1065; --bg-gradient-end: #4c1d95; }
         
-        /* Glassmorphism + 3D Tilt Base */
+        /* Glassmorphism */
         .glass-card {
             background: var(--card-bg);
             backdrop-filter: blur(20px);
@@ -101,88 +106,61 @@
             perspective: 1000px;
         }
         
-        .tilt-card {
-            transition: transform 0.1s ease-out;
-        }
+        .tilt-card { transition: transform 0.1s ease-out; }
 
-        /* Animation Canvas - Higher z-index to appear over card */
+        /* Animation Canvas */
         #canvas-wrapper {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 50; /* On top of everything */
-            pointer-events: none;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 50; pointer-events: none;
         }
 
-        /* --- NEW SNOWFLAKE STYLES --- */
+        /* Snow Wrapper */
         #snow-wrapper {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 60; /* Above canvas */
-            overflow: hidden;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 60; overflow: hidden;
         }
 
         .snowflake {
-            position: absolute;
-            top: -5vh;
-            color: #fff;
-            font-family: sans-serif; 
-            opacity: 0.9;
-            user-select: none;
-            will-change: transform;
-            text-shadow: 0 0 5px rgba(0,0,0,0.2); 
+            position: absolute; top: -5vh; color: #fff;
+            font-family: sans-serif; opacity: 0.9; user-select: none;
+            will-change: transform; text-shadow: 0 0 5px rgba(0,0,0,0.2); 
         }
 
-        @keyframes flickr {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
-        @keyframes fall {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(20vw, 110vh) rotate(360deg); }
-        }
+        @keyframes flickr { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        @keyframes fall { 0% { transform: translate(0, 0) rotate(0deg); } 100% { transform: translate(20vw, 110vh) rotate(360deg); } }
         
-        /* Icons & Animations */
         @keyframes pulse-sun { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.8; } }
         .weather-icon-sunny { animation: pulse-sun 3s infinite ease-in-out; }
         
         @keyframes pulse-mic { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         .mic-active { animation: pulse-mic 1.5s infinite; color: #ef4444 !important; }
 
-        /* Toggle Switch */
         .toggle-checkbox:checked { right: 0; border-color: #68D391; }
         .toggle-checkbox:checked + .toggle-label { background-color: #68D391; }
         
-        /* CSS Clouds */
         @keyframes drift { 0% { transform: translateX(-120%); } 100% { transform: translateX(120vw); } }
         .css-cloud { position: absolute; opacity: 0.4; filter: blur(20px); background: white; border-radius: 50%; animation: drift 60s linear infinite; z-index: 0; }
 
-        /* Entrance Animations */
-        @keyframes slideUpFade {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-enter {
-            animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            opacity: 0; 
-        }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-enter { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         
-        /* Clock Animation */
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         .clock-colon { animation: blink 1s infinite; }
+
+        /* Skeleton */
+        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+        .skeleton {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(to right, var(--skeleton-start) 4%, var(--skeleton-end) 25%, var(--skeleton-start) 36%);
+            background-size: 1000px 100%;
+            border-radius: 8px;
+        }
 
         ::-webkit-scrollbar { height: 4px; width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
         
-        /* Monospace font for clock */
         .font-mono-clock { font-family: 'JetBrains Mono', monospace; }
 
     </style>
@@ -249,9 +227,24 @@
             <div id="favorites-container" class="flex flex-wrap gap-2 mt-3"></div>
         </div>
 
-        <div class="loader py-20 hidden" id="loader">
-            <div class="spinner"></div>
-            <p class="text-center mt-4 font-medium animate-pulse" style="color: var(--text-secondary)">Scanning satellite data...</p>
+        <!-- Skeleton -->
+        <div id="skeleton-loader" class="hidden animate-pulse">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="skeleton h-64 w-full rounded-3xl"></div>
+                    <div class="skeleton h-64 w-full rounded-3xl"></div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="skeleton h-32 rounded-2xl"></div>
+                        <div class="skeleton h-32 rounded-2xl"></div>
+                        <div class="skeleton h-32 rounded-2xl"></div>
+                        <div class="skeleton h-32 rounded-2xl"></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="skeleton h-80 w-full rounded-3xl"></div>
+                    <div class="skeleton h-64 w-full rounded-3xl"></div>
+                </div>
+            </div>
         </div>
 
         <div class="error-message p-10 text-center hidden" id="error-message">
@@ -264,25 +257,21 @@
         <div class="weather-content hidden opacity-0 transition-opacity duration-700 relative z-10" id="weather-content">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                <!-- LEFT: Current, Graph, Highlights (8 cols) -->
+                <!-- LEFT -->
                 <div class="lg:col-span-8 space-y-6">
-                    
-                    <!-- Main Card with Tilt -->
+                    <!-- Main Card -->
                     <div id="main-card" class="tilt-card animate-enter flex flex-col sm:flex-row items-center sm:items-start justify-between p-6 sm:p-8 rounded-3xl relative overflow-hidden group shadow-lg" style="background: var(--detail-bg); animation-delay: 0.1s;">
                         <div class="flex flex-col z-10 w-full sm:w-auto text-center sm:text-left">
                             <div class="flex items-center justify-center sm:justify-start gap-3 mb-1">
                                 <h1 id="city-name" class="text-3xl sm:text-5xl font-bold tracking-tight" style="color: var(--text-primary);">Berlin</h1>
                                 <button id="fav-btn" class="text-2xl opacity-50 hover:opacity-100 transition-opacity focus:outline-none hover:scale-110 transform duration-200" style="color: var(--text-primary);">♡</button>
                             </div>
-                            
-                            <!-- NEW: Animated Clock Container -->
                             <div class="flex flex-col gap-1 mb-6">
                                 <p id="local-date" class="text-xs sm:text-sm font-bold tracking-wide uppercase opacity-60" style="color: var(--text-primary);">MON, NOV 22</p>
                                 <p id="local-time" class="text-3xl sm:text-4xl font-mono-clock font-bold tracking-tight" style="color: var(--text-primary);">
                                     12<span class="clock-colon">:</span>30<span class="clock-colon">:</span>45 <span class="text-lg align-top">PM</span>
                                 </p>
                             </div>
-                            
                             <div class="flex flex-col sm:flex-row items-center sm:items-end gap-4 mt-auto">
                                 <div id="temperature" class="text-7xl sm:text-8xl font-extrabold tracking-tighter" style="color: var(--text-primary); line-height: 0.9;">15°</div>
                                 <div class="flex flex-col justify-end pb-2 text-center sm:text-left">
@@ -307,14 +296,13 @@
 
                     <!-- Highlights Grid -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <!-- AQI Card -->
+                        <!-- AQI -->
                         <div class="animate-enter rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-105 duration-300 shadow-md" style="background: var(--detail-bg); animation-delay: 0.3s;">
                             <span class="text-[10px] sm:text-xs font-bold uppercase mb-2 opacity-60 tracking-wider" style="color: var(--text-primary);">Air Quality</span>
                             <div id="aqi-badge" class="px-3 py-1 rounded-full text-xs font-bold mb-1 bg-green-400 text-white shadow-sm">Good</div>
                             <span id="aqi-val" class="text-lg font-bold" style="color: var(--text-primary);">25</span>
                         </div>
-
-                        <!-- UV Index -->
+                        <!-- UV -->
                         <div class="animate-enter rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-105 duration-300 shadow-md" style="background: var(--detail-bg); animation-delay: 0.35s;">
                             <span class="text-[10px] sm:text-xs font-bold uppercase mb-2 opacity-60 tracking-wider" style="color: var(--text-primary);">UV Index</span>
                             <div class="w-full h-1.5 bg-gray-300 bg-opacity-30 rounded-full mb-2 overflow-hidden relative">
@@ -322,8 +310,7 @@
                             </div>
                             <span id="uv-val" class="text-xl font-bold" style="color: var(--text-primary);">0</span>
                         </div>
-
-                        <!-- Wind (Compass) -->
+                        <!-- Wind -->
                         <div class="animate-enter rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-105 duration-300 shadow-md" style="background: var(--detail-bg); animation-delay: 0.4s;">
                             <span class="text-[10px] sm:text-xs font-bold uppercase mb-2 opacity-60 tracking-wider" style="color: var(--text-primary);">Wind</span>
                             <div class="relative w-8 h-8 mb-1 flex items-center justify-center">
@@ -334,24 +321,24 @@
                             </div>
                             <div class="flex items-baseline gap-1">
                                 <span id="wind-val" class="text-lg font-bold" style="color: var(--text-primary);">11</span>
-                                <span class="text-xs" style="color: var(--text-secondary);">km/h</span>
+                                <div class="flex flex-col text-left leading-none">
+                                    <span class="text-[10px]" style="color: var(--text-secondary);">km/h</span>
+                                    <span id="wind-dir-text" class="text-[10px] font-bold" style="color: var(--text-primary);">NW</span>
+                                </div>
                             </div>
                         </div>
-
                         <!-- Humidity -->
                         <div class="animate-enter rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-105 duration-300 shadow-md" style="background: var(--detail-bg); animation-delay: 0.45s;">
                             <span class="text-[10px] sm:text-xs font-bold uppercase mb-2 opacity-60 tracking-wider" style="color: var(--text-primary);">Humidity</span>
                             <span id="humidity-val" class="text-xl font-bold mb-1" style="color: var(--text-primary);">68%</span>
                             <span class="text-[10px] opacity-60" style="color: var(--text-primary);">Dew: <span id="dew-val">12°</span></span>
                         </div>
-                        
                         <!-- Visibility -->
                         <div class="animate-enter rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-105 duration-300 shadow-md" style="background: var(--detail-bg); animation-delay: 0.48s;">
                             <span class="text-[10px] sm:text-xs font-bold uppercase mb-2 opacity-60 tracking-wider" style="color: var(--text-primary);">Visibility</span>
                             <span id="visibility-value" class="text-xl font-bold mb-1" style="color: var(--text-primary);">10</span>
                             <span class="text-xs" style="color: var(--text-secondary);">km</span>
                         </div>
-
                         <!-- Pressure -->
                         <div class="animate-enter rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-105 duration-300 shadow-md" style="background: var(--detail-bg); animation-delay: 0.5s;">
                             <span class="text-[10px] sm:text-xs font-bold uppercase mb-2 opacity-60 tracking-wider" style="color: var(--text-primary);">Pressure</span>
@@ -361,10 +348,10 @@
                     </div>
                 </div>
 
-                <!-- RIGHT: Forecasts & Radar (4 cols) -->
+                <!-- RIGHT: Forecasts & Radar -->
                 <div class="lg:col-span-4 space-y-6">
                     
-                    <!-- 5-Day Forecast -->
+                    <!-- 7-Day Forecast -->
                     <div class="animate-enter p-6 rounded-3xl shadow-lg" style="background: var(--detail-bg); animation-delay: 0.5s;">
                         <h3 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -375,7 +362,7 @@
                         </div>
                     </div>
 
-                    <!-- Live Radar -->
+                    <!-- Radar -->
                     <div class="animate-enter p-1 rounded-3xl overflow-hidden shadow-lg h-56 sm:h-64" style="border: 1px solid var(--radar-border); background: var(--detail-bg); animation-delay: 0.6s;">
                         <iframe id="radar-iframe" loading="lazy" class="w-full h-full border-0 rounded-2xl"></iframe>
                     </div>
@@ -389,6 +376,9 @@
                         <div class="animate-enter rounded-3xl p-4 text-center shadow-md" style="background: var(--detail-bg); animation-delay: 0.8s;">
                             <span class="text-[10px] sm:text-xs font-bold uppercase mb-1 opacity-60 block" style="color: var(--text-primary);">Sunset</span>
                             <span id="sunset-val" class="text-lg font-bold" style="color: var(--text-primary);">18:00</span>
+                            
+                            <!-- MOON PHASE -->
+                            <div class="mt-3 border-t border-white border-opacity-10 pt-2" id="moon-phase"></div>
                         </div>
                     </div>
 
@@ -406,7 +396,7 @@
                 searchButton: document.getElementById('search-button'),
                 micButton: document.getElementById('mic-button'),
                 gpsButton: document.getElementById('gps-button'),
-                loader: document.getElementById('loader'),
+                loader: document.getElementById('skeleton-loader'),
                 errorMsg: document.getElementById('error-message'),
                 content: document.getElementById('weather-content'),
                 icon: document.getElementById('weather-icon'),
@@ -414,18 +404,19 @@
                 desc: document.getElementById('weather-description'),
                 temp: document.getElementById('temperature'),
                 feelsLike: document.getElementById('feels-like'),
-                localDate: document.getElementById('local-date'), // NEW
-                localTime: document.getElementById('local-time'), // NEW
+                localDate: document.getElementById('local-date'), 
+                localTime: document.getElementById('local-time'), 
                 
-                // Highlights
                 aqiBadge: document.getElementById('aqi-badge'),
                 aqiVal: document.getElementById('aqi-val'),
                 uvVal: document.getElementById('uv-val'),
                 uvBar: document.getElementById('uv-bar'),
                 wind: document.getElementById('wind-val'),
                 windArrow: document.getElementById('wind-arrow'),
+                windDirText: document.getElementById('wind-dir-text'),
                 sunrise: document.getElementById('sunrise-val'),
                 sunset: document.getElementById('sunset-val'),
+                moonPhase: document.getElementById('moon-phase'),
                 humidity: document.getElementById('humidity-val'),
                 dew: document.getElementById('dew-val'),
                 visibility: document.getElementById('visibility-value'),
@@ -439,7 +430,7 @@
                 unitToggle: document.getElementById('unit-toggle'),
                 canvas: document.getElementById('canvas-wrapper'),
                 cloudsCont: document.getElementById('clouds-wrapper'),
-                snowCont: document.getElementById('snow-wrapper'), // NEW: Snow Container
+                snowCont: document.getElementById('snow-wrapper'),
                 alertBanner: document.getElementById('alert-banner'),
                 alertText: document.getElementById('alert-text'),
                 chartCanvas: document.getElementById('tempChart'),
@@ -455,14 +446,11 @@
             let animationId;
             let lightningAlpha = 0; 
             let activeWeatherType = null; 
-            
-            // NEW: Clock Interval
             let clockInterval = null; 
             let activeTimezone = 'UTC';
-
             let favorites = JSON.parse(localStorage.getItem('weatherFavorites')) || [];
 
-            // Icons
+            // Icons (SVG strings)
             const icons = {
                 sunny: `<svg class="w-full h-full weather-icon-sunny" viewBox="0 0 24 24" style="fill: #FDB813;"><circle cx="12" cy="12" r="5"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>`,
                 partly: `<svg class="w-full h-full" viewBox="0 0 24 24" style="fill: var(--icon-fill);"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.9 0 5.33 2.16 5.86 5.01l.24 1.28.6.03c1.94.1 3.49 1.68 3.49 3.65C22.19 16.32 20.84 18 19 18z"/></svg>`,
@@ -472,6 +460,18 @@
                 thunder: `<svg class="w-full h-full" viewBox="0 0 24 24" style="fill: var(--icon-fill);"><path d="M19 10c-.7-3.4-3.7-6-7-6-2.9 0-5.4 1.6-6.6 4C2.3 8.4 0 10.9 0 14c0 3.3 2.7 6 6 6h13c2.8 0 5-2.2 5-5 0-2.6-2.1-4.8-4.7-5- .3 0-.6 0-.9 0z"/><path d="M11 14l-2 4h3l-1 4 5-6h-3l2-2" fill="#FFD700"/></svg>`,
                 fog: `<svg class="w-full h-full" viewBox="0 0 24 24" style="fill: var(--icon-fill);"><path d="M4 10h16M4 14h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`
             };
+
+            // NEW: Moon Phase Emojis (Robust)
+            const moonIcons = [
+                '🌑', // New
+                '🌒', // Waxing Crescent
+                '🌓', // First Quarter
+                '🌔', // Waxing Gibbous
+                '🌕', // Full
+                '🌖', // Waning Gibbous
+                '🌗', // Last Quarter
+                '🌘'  // Waning Crescent
+            ];
 
             // --- 3D TILT EFFECT ---
             function initTilt() {
@@ -538,7 +538,6 @@
             // --- DOM SNOW GENERATOR ---
             function generateSnowDOM() {
                 els.snowCont.innerHTML = ''; 
-                
                 const createFlake = (sizeClass) => {
                     const el = document.createElement('div');
                     el.classList.add('snowflake');
@@ -557,7 +556,6 @@
                     else el.style.fontSize = '1em';
                     els.snowCont.appendChild(el);
                 };
-
                 for(let i=0; i<250; i++) createFlake();
                 for(let i=0; i<50; i++) createFlake('_md');
                 for(let i=0; i<50; i++) createFlake('_lg');
@@ -611,7 +609,6 @@
                     canvasCtx.fillRect(0, 0, els.canvas.width, els.canvas.height);
                     lightningAlpha -= 0.05;
                 }
-                
                 if (activeWeatherType === 'thunder' && Math.random() < 0.01) {
                     lightningAlpha = 0.3;
                     createBolt(); 
@@ -737,7 +734,6 @@
             }
 
             // --- API LOGIC ---
-            
             function wmoToInfo(code) {
                 const codes = {
                     0: ['Clear Sky', 'sunny'], 1: ['Mainly Clear', 'sunny'], 2: ['Partly Cloudy', 'partly'],
@@ -757,6 +753,30 @@
                 return Math.round(c) + '°';
             }
 
+            function getWindDirection(degrees) {
+                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                const index = Math.round(degrees / 45) % 8;
+                return directions[index];
+            }
+            
+            // Helper to get index 0-7
+            function getMoonPhaseIndex(date) {
+                let year = date.getFullYear();
+                let month = date.getMonth() + 1;
+                const day = date.getDate();
+                if (month < 3) { year--; month += 12; }
+                ++month;
+                const c = 365.25 * year;
+                const e = 30.6 * month;
+                let jd = c + e + day - 694039.09; 
+                jd /= 29.5305882; 
+                let b = parseInt(jd); 
+                jd -= b; 
+                b = Math.round(jd * 8); 
+                if (b >= 8) b = 0; 
+                return b; 
+            }
+
             async function fetchAirQuality(lat, lon) {
                 try {
                     const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi`);
@@ -764,13 +784,11 @@
                     if(data.current && data.current.us_aqi) {
                         const aqi = data.current.us_aqi;
                         animateValue(els.aqiVal, 0, aqi, 1000); 
-                        
                         let color = 'bg-green-400';
-                        let text = 'Good';
+                        let text = 'Good'; // FIXED: text variable defined
                         if(aqi > 50) { color = 'bg-yellow-400'; text = 'Moderate'; }
                         if(aqi > 100) { color = 'bg-orange-400'; text = 'Unhealthy'; }
                         if(aqi > 150) { color = 'bg-red-500'; text = 'Bad'; }
-                        
                         els.aqiBadge.className = `px-3 py-1 rounded-full text-xs font-bold mb-1 text-white transition-colors ${color}`;
                         els.aqiBadge.textContent = text;
                     }
@@ -788,7 +806,6 @@
                     const res = await fetch(url);
                     if (!res.ok) throw new Error('API Error');
                     const data = await res.json();
-                    
                     currentData = { ...data, displayCity: cityName }; 
                     
                     fetchAirQuality(lat, lon);
@@ -803,7 +820,6 @@
                         el.offsetHeight; 
                         el.style.animation = ''; 
                     });
-                    
                     setTimeout(() => els.content.classList.remove('opacity-0'), 50);
 
                 } catch (err) {
@@ -822,13 +838,11 @@
                 document.body.classList.toggle('night-mode', !isDay);
                 
                 let [desc, iconKey] = wmoToInfo(current.weather_code);
-
                 const totalRain = (current.rain || 0) + (current.showers || 0);
                 if (totalRain > 0.1 && ['sunny', 'partly', 'cloudy', 'fog'].includes(iconKey)) {
                     iconKey = 'rain';
                     desc = 'Light Rain'; 
                 }
-
                 setVisuals(iconKey, isDay);
 
                 if (current.weather_code >= 95 || (current.weather_code >= 65 && current.weather_code < 70) || current.weather_code === 82) {
@@ -859,6 +873,9 @@
                 if(els.windArrow) {
                     els.windArrow.style.transform = `rotate(${current.wind_direction_10m}deg)`;
                 }
+                if(els.windDirText) {
+                    els.windDirText.textContent = getWindDirection(current.wind_direction_10m);
+                }
 
                 els.humidity.textContent = current.relative_humidity_2m + '%';
                 if (els.visibility) els.visibility.textContent = (current.visibility / 1000).toFixed(1);
@@ -873,6 +890,22 @@
                 const sunset = new Date(daily.sunset[0]).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 els.sunrise.textContent = sunrise;
                 els.sunset.textContent = sunset;
+                
+                // Update Moon Phase with Emojis
+                if(els.moonPhase) {
+                     const phases = ["New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous", "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"];
+                     const phaseIndex = getMoonPhaseIndex(new Date());
+                     const phaseName = phases[phaseIndex];
+                     const phaseIcon = moonIcons[phaseIndex];
+                     
+                     els.moonPhase.innerHTML = `
+                        <div class="flex flex-col items-center mt-2">
+                            <div class="text-4xl mb-1 drop-shadow-md filter contrast-125">${phaseIcon}</div>
+                            <span class="font-medium text-xs opacity-80" style="color: var(--text-primary);">${phaseName}</span>
+                        </div>
+                     `;
+                     els.moonPhase.parentElement.classList.remove('hidden'); 
+                } 
 
                 renderChart(hourly, isDay);
 
