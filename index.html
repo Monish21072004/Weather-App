@@ -14,7 +14,7 @@
     <!-- 3. Import Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         /* Base Styles */
@@ -105,7 +105,7 @@
             transition: transform 0.1s ease-out;
         }
 
-        /* Animation Canvas - FIXED: Higher z-index to appear over card */
+        /* Animation Canvas - Higher z-index to appear over card */
         #canvas-wrapper {
             position: fixed;
             top: 0;
@@ -113,7 +113,40 @@
             width: 100%;
             height: 100%;
             z-index: 50; /* On top of everything */
-            pointer-events: none; /* Click through */
+            pointer-events: none;
+        }
+
+        /* --- NEW SNOWFLAKE STYLES --- */
+        #snow-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 60; /* Above canvas */
+            overflow: hidden;
+        }
+
+        .snowflake {
+            position: absolute;
+            top: -5vh;
+            color: #fff;
+            font-family: sans-serif; 
+            opacity: 0.9;
+            user-select: none;
+            will-change: transform;
+            text-shadow: 0 0 5px rgba(0,0,0,0.2); 
+        }
+
+        @keyframes flickr {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes fall {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(20vw, 110vh) rotate(360deg); }
         }
         
         /* Icons & Animations */
@@ -140,16 +173,25 @@
             animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             opacity: 0; 
         }
+        
+        /* Clock Animation */
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .clock-colon { animation: blink 1s infinite; }
 
         ::-webkit-scrollbar { height: 4px; width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        
+        /* Monospace font for clock */
+        .font-mono-clock { font-family: 'JetBrains Mono', monospace; }
 
     </style>
 </head>
 <body class="day-mode p-4 sm:p-6 md:p-8 min-h-screen flex items-start justify-center">
     
     <canvas id="canvas-wrapper"></canvas>
+    <!-- Snow Wrapper -->
+    <div id="snow-wrapper"></div>
     <div id="clouds-wrapper" class="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden"></div>
 
     <div class="weather-app w-full max-w-7xl glass-card rounded-3xl p-6 sm:p-8 z-10 relative overflow-hidden">
@@ -168,10 +210,12 @@
 
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 relative z-10">
-            <h2 class="text-2xl font-bold flex items-center gap-2 tracking-tight" style="color: var(--text-primary);">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
-                Atmosphere Pro
-            </h2>
+            <div class="flex flex-col">
+                <h2 class="text-2xl font-bold flex items-center gap-2 tracking-tight" style="color: var(--text-primary);">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                    Atmosphere Pro
+                </h2>
+            </div>
             
             <div class="flex items-center gap-3 bg-opacity-10 bg-black rounded-full px-4 py-2">
                 <span class="text-sm font-bold" style="color: var(--text-secondary)">°C</span>
@@ -230,7 +274,14 @@
                                 <h1 id="city-name" class="text-3xl sm:text-5xl font-bold tracking-tight" style="color: var(--text-primary);">Berlin</h1>
                                 <button id="fav-btn" class="text-2xl opacity-50 hover:opacity-100 transition-opacity focus:outline-none hover:scale-110 transform duration-200" style="color: var(--text-primary);">♡</button>
                             </div>
-                            <p id="date-time" class="text-xs sm:text-sm font-bold tracking-wide uppercase mb-6 opacity-60" style="color: var(--text-primary);">Mon, 12:30 PM</p>
+                            
+                            <!-- NEW: Animated Clock Container -->
+                            <div class="flex flex-col gap-1 mb-6">
+                                <p id="local-date" class="text-xs sm:text-sm font-bold tracking-wide uppercase opacity-60" style="color: var(--text-primary);">MON, NOV 22</p>
+                                <p id="local-time" class="text-3xl sm:text-4xl font-mono-clock font-bold tracking-tight" style="color: var(--text-primary);">
+                                    12<span class="clock-colon">:</span>30<span class="clock-colon">:</span>45 <span class="text-lg align-top">PM</span>
+                                </p>
+                            </div>
                             
                             <div class="flex flex-col sm:flex-row items-center sm:items-end gap-4 mt-auto">
                                 <div id="temperature" class="text-7xl sm:text-8xl font-extrabold tracking-tighter" style="color: var(--text-primary); line-height: 0.9;">15°</div>
@@ -363,7 +414,8 @@
                 desc: document.getElementById('weather-description'),
                 temp: document.getElementById('temperature'),
                 feelsLike: document.getElementById('feels-like'),
-                time: document.getElementById('date-time'),
+                localDate: document.getElementById('local-date'), // NEW
+                localTime: document.getElementById('local-time'), // NEW
                 
                 // Highlights
                 aqiBadge: document.getElementById('aqi-badge'),
@@ -387,6 +439,7 @@
                 unitToggle: document.getElementById('unit-toggle'),
                 canvas: document.getElementById('canvas-wrapper'),
                 cloudsCont: document.getElementById('clouds-wrapper'),
+                snowCont: document.getElementById('snow-wrapper'), // NEW: Snow Container
                 alertBanner: document.getElementById('alert-banner'),
                 alertText: document.getElementById('alert-text'),
                 chartCanvas: document.getElementById('tempChart'),
@@ -398,10 +451,14 @@
             let chartInstance = null;
             let canvasCtx = els.canvas.getContext('2d');
             let particles = [];
-            let activeBolts = []; // NEW: Store active bolts
+            let activeBolts = []; 
             let animationId;
-            let lightningAlpha = 0; // For flash
-            let activeWeatherType = null; // Tracking for loop
+            let lightningAlpha = 0; 
+            let activeWeatherType = null; 
+            
+            // NEW: Clock Interval
+            let clockInterval = null; 
+            let activeTimezone = 'UTC';
 
             let favorites = JSON.parse(localStorage.getItem('weatherFavorites')) || [];
 
@@ -420,21 +477,16 @@
             function initTilt() {
                 const card = els.mainCard;
                 if(!card) return;
-                
                 card.addEventListener('mousemove', (e) => {
                     const rect = card.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
-                    
                     const centerX = rect.width / 2;
                     const centerY = rect.height / 2;
-                    
                     const rotateX = ((y - centerY) / centerY) * -5; 
                     const rotateY = ((x - centerX) / centerX) * 5;
-
                     card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
                 });
-
                 card.addEventListener('mouseleave', () => {
                     card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
                 });
@@ -458,6 +510,59 @@
                 window.requestAnimationFrame(step);
             }
 
+            // --- NEW: LIVE CLOCK ---
+            function updateClock() {
+                if (!activeTimezone) return;
+                
+                const now = new Date();
+                const dateOptions = { timeZone: activeTimezone, weekday: 'short', month: 'short', day: 'numeric' };
+                const dateStr = new Intl.DateTimeFormat('en-US', dateOptions).format(now);
+                const timeOptions = { timeZone: activeTimezone, hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true };
+                const timeStr = new Intl.DateTimeFormat('en-US', timeOptions).format(now);
+                const [time, period] = timeStr.split(' ');
+                const [hr, min, sec] = time.split(':');
+                
+                els.localDate.textContent = dateStr;
+                els.localTime.innerHTML = `
+                    ${hr}<span class="clock-colon">:</span>${min}<span class="clock-colon">:</span>${sec} <span class="text-lg align-top">${period}</span>
+                `;
+            }
+            
+            function startClock(timezone) {
+                activeTimezone = timezone;
+                if (clockInterval) clearInterval(clockInterval);
+                updateClock(); 
+                clockInterval = setInterval(updateClock, 1000);
+            }
+
+            // --- DOM SNOW GENERATOR ---
+            function generateSnowDOM() {
+                els.snowCont.innerHTML = ''; 
+                
+                const createFlake = (sizeClass) => {
+                    const el = document.createElement('div');
+                    el.classList.add('snowflake');
+                    el.innerText = '❄️';
+                    const left = Math.random() * 120 - 20;
+                    const blur = Math.random() > 0.5 ? 1 : 0;
+                    const flickrDur = (Math.random() * 20 + 20) / 10;
+                    const flickrDelay = (Math.random() * 20) / -10;
+                    const fallDur = (Math.random() * 100 + 50) / 5;
+                    const fallDelay = (Math.random() * 100) / -5;
+                    el.style.left = `${left}vw`;
+                    el.style.filter = `blur(${blur}px)`;
+                    el.style.animation = `flickr ${flickrDur}s ${flickrDelay}s infinite, fall ${fallDur}s ${fallDelay}s linear infinite`;
+                    if (sizeClass === '_md') el.style.fontSize = '1.5em';
+                    else if (sizeClass === '_lg') el.style.fontSize = '2.25em';
+                    else el.style.fontSize = '1em';
+                    els.snowCont.appendChild(el);
+                };
+
+                for(let i=0; i<250; i++) createFlake();
+                for(let i=0; i<50; i++) createFlake('_md');
+                for(let i=0; i<50; i++) createFlake('_lg');
+            }
+
             // --- CANVAS ANIMATION ENGINE ---
             function resizeCanvas() { els.canvas.width = window.innerWidth; els.canvas.height = window.innerHeight; }
             window.addEventListener('resize', resizeCanvas);
@@ -473,41 +578,26 @@
                         opacity: Math.random() * 0.5 + 0.1,
                         type: type
                     };
-                    // ... existing particle setup ...
-                    if(type === 'rain') {
-                        p.length = Math.random() * 20 + 10;
-                    }
-                    else if(type === 'snow') {
-                         p.size = Math.random() * 2 + 1;
-                         p.speed = Math.random() * 2 + 1;
-                    }
+                    if(type === 'rain') p.length = Math.random() * 20 + 10;
                     else if(type === 'fog') {
-                        p.size = Math.random() * 300 + 200; // Big
+                        p.size = Math.random() * 300 + 200; 
                         p.speed = Math.random() * 0.5 + 0.1;
-                        p.opacity = 0.05; // Very subtle
-                        p.y = Math.random() * els.canvas.height * 0.8 + els.canvas.height * 0.1; // Middle band
+                        p.opacity = 0.05;
+                        p.y = Math.random() * els.canvas.height * 0.8 + els.canvas.height * 0.1;
                     }
-                    else if (type === 'stars') {
-                        p.size = Math.random() * 2 + 1;
-                    }
+                    else if (type === 'stars') p.size = Math.random() * 2 + 1;
                     particles.push(p);
                 }
             }
 
-            // NEW: Create a persistent lightning bolt
             function createBolt() {
-                const bolt = {
-                    points: [],
-                    opacity: 1,
-                    life: 10 // Frames to live
-                };
+                const bolt = { points: [], opacity: 1, life: 10 };
                 let x = Math.random() * els.canvas.width;
                 let y = 0;
                 bolt.points.push({x, y});
-                
                 while (y < els.canvas.height) {
-                    x += (Math.random() - 0.5) * 50; // Jaggedness
-                    y += Math.random() * 30 + 10; // Step down
+                    x += (Math.random() - 0.5) * 50;
+                    y += Math.random() * 30 + 10;
                     bolt.points.push({x, y});
                 }
                 activeBolts.push(bolt);
@@ -516,22 +606,18 @@
             function animateParticles() {
                 canvasCtx.clearRect(0, 0, els.canvas.width, els.canvas.height);
                 
-                // Lightning Flash (Background)
                 if (lightningAlpha > 0) {
                     canvasCtx.fillStyle = `rgba(255, 255, 255, ${lightningAlpha})`;
                     canvasCtx.fillRect(0, 0, els.canvas.width, els.canvas.height);
-                    lightningAlpha -= 0.05; // Fade out speed
+                    lightningAlpha -= 0.05;
                 }
                 
-                // Random Lightning Trigger
-                if (activeWeatherType === 'thunder' && Math.random() < 0.01) { // 1% chance per frame
-                    lightningAlpha = 0.3; // Set Flash brightness
+                if (activeWeatherType === 'thunder' && Math.random() < 0.01) {
+                    lightningAlpha = 0.3;
                     createBolt(); 
-                    // Occasional double strike
                     if(Math.random() < 0.3) setTimeout(createBolt, 150);
                 }
 
-                // Draw Active Bolts
                 if (activeBolts.length > 0) {
                     canvasCtx.save();
                     canvasCtx.shadowBlur = 15;
@@ -546,13 +632,12 @@
                             for(let pt of b.points) canvasCtx.lineTo(pt.x, pt.y);
                             canvasCtx.stroke();
                         }
-                        b.opacity -= 0.1; // Bolt fade speed
+                        b.opacity -= 0.1;
                         if (b.opacity <= 0) activeBolts.splice(i, 1);
                     }
                     canvasCtx.restore();
                 }
 
-                // Draw Particles (Rain, Snow, etc)
                 particles.forEach(p => {
                     canvasCtx.beginPath();
                     if (p.type === 'rain') {
@@ -564,19 +649,11 @@
                         p.y += p.speed;
                         if (p.y > els.canvas.height) { p.y = -p.length; p.x = Math.random() * els.canvas.width; }
                     } 
-                    else if (p.type === 'snow') {
-                        canvasCtx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
-                        canvasCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                        canvasCtx.fill();
-                        p.y += p.speed * 0.3; 
-                        p.x += Math.sin(p.y * 0.01) * 0.5; 
-                        if (p.y > els.canvas.height) { p.y = -5; p.x = Math.random() * els.canvas.width; }
-                    }
                     else if (p.type === 'fog') {
                         canvasCtx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
                         canvasCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                         canvasCtx.fill();
-                        p.x -= p.speed; // Drift Left
+                        p.x -= p.speed;
                         if (p.x < -p.size) { p.x = els.canvas.width + p.size; }
                     }
                     else if (p.type === 'stars') {
@@ -606,8 +683,9 @@
                 cancelAnimationFrame(animationId);
                 canvasCtx.clearRect(0, 0, els.canvas.width, els.canvas.height);
                 particles = [];
-                activeBolts = []; // Clear bolts
+                activeBolts = [];
                 els.cloudsCont.innerHTML = ''; 
+                els.snowCont.innerHTML = ''; 
                 lightningAlpha = 0; 
                 activeWeatherType = null; 
 
@@ -623,7 +701,6 @@
                         animType = 'particles'; animCount = 60;
                     }
                 } 
-                // FIX: Check for 'thunder' (the mapped key), NOT 'thunderstorm'
                 else if (icon === 'rain' || icon === 'thunder') {
                     bgClass = icon === 'thunder' ? 'weather-thunder' : 'weather-rain';
                     animType = 'rain'; animCount = 150;
@@ -631,7 +708,7 @@
                 }
                 else if (icon === 'snow') {
                     bgClass = 'weather-snow';
-                    animType = 'snow'; animCount = 80;
+                    generateSnowDOM();
                 }
                 else if (['cloudy', 'partlyCloudy'].includes(icon)) {
                     bgClass = 'weather-cloudy';
@@ -680,7 +757,6 @@
                 return Math.round(c) + '°';
             }
 
-            // Fetch Air Quality
             async function fetchAirQuality(lat, lon) {
                 try {
                     const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi`);
@@ -764,8 +840,6 @@
 
                 els.city.textContent = currentData.displayCity;
                 updateFavIcon(currentData.displayCity);
-                const now = new Date();
-                els.time.textContent = now.toLocaleDateString('en-US', { weekday: 'long', hour: 'numeric', minute: '2-digit' });
                 
                 const tempVal = isFahrenheit ? Math.round((current.temperature_2m * 9/5) + 32) : Math.round(current.temperature_2m);
                 animateValue(els.temp, 0, tempVal, 1000);
@@ -811,18 +885,24 @@
                     const min = formatTemp(daily.temperature_2m_min[i]);
 
                     const row = document.createElement('div');
-                    row.className = 'flex items-center justify-between p-3 rounded-xl transition-colors hover:bg-white hover:bg-opacity-10 cursor-default';
+                    row.className = 'flex items-center justify-between p-3 rounded-xl transition-colors hover:bg-white hover:bg-opacity-10 cursor-pointer';
                     row.innerHTML = `
                         <span class="w-16 font-semibold" style="color: var(--text-primary)">${dDay}</span>
                         <div class="flex items-center gap-2 flex-1">
                             <div class="w-6 h-6">${icons[dIconKey]}</div>
-                            <span class="text-sm hidden sm:block" style="color: var(--text-secondary)">${dDesc}</span>
+                            <span class="weather-desc text-sm hidden sm:block transition-all duration-300" style="color: var(--text-secondary)">${dDesc}</span>
                         </div>
                         <div class="flex gap-4">
                             <span class="font-bold" style="color: var(--text-primary)">${max}</span>
                             <span class="font-medium" style="color: var(--text-secondary)">${min}</span>
                         </div>
                     `;
+                    
+                    row.onclick = () => {
+                        const descSpan = row.querySelector('.weather-desc');
+                        descSpan.classList.toggle('hidden');
+                    };
+
                     els.dailyCont.appendChild(row);
                 }
 
