@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
-    <title>Aether Station</title>
+    <title>Aether Station V3</title>
     
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -113,7 +113,15 @@
             box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
             border-radius: var(--card-radius);
             transition: transform 0.3s ease, border-color 0.3s ease;
+            position: relative;
         }
+        /* Noise Texture for Glass */
+        .glass::before {
+            content: ""; position: absolute; inset: 0; z-index: -1;
+            opacity: 0.4; pointer-events: none; border-radius: inherit;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+
         @media (hover: hover) {
             .glass:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.2); }
         }
@@ -141,13 +149,30 @@
         .fluid-h1 { font-size: clamp(2rem, 5vw, 4rem); }
         .text-glow { text-shadow: 0 0 30px rgba(255,255,255,0.2); }
 
-        /* Loading */
-        .loader {
-            width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.1);
-            border-left-color: var(--accent-cyan); border-radius: 50%;
-            animation: spin 1s linear infinite;
+        /* Skeleton Loading */
+        .skeleton {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: transparent !important;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
         }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .skeleton::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            animation: skeletonShimmer 1.5s infinite;
+        }
+        @keyframes skeletonShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        
+        /* Elements to hide when loaded */
+        body.loaded .skeleton {
+            animation: none; color: inherit !important; background: transparent;
+        }
+        body.loaded .skeleton::after { display: none; }
+        
+        body:not(.loaded) .data-content { opacity: 0; }
+        body.loaded .data-content { opacity: 1; transition: opacity 0.5s; }
 
         /* Custom Scroll */
         .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -173,12 +198,6 @@
     <canvas id="precip-canvas" width="1468" height="541"></canvas>
     <div id="lightning"></div>
 
-    <!-- LOADER -->
-    <div class="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center transition-opacity duration-700 opacity-0 pointer-events-none" id="loader">
-        <div class="loader mb-6"></div>
-        <div class="font-mono text-cyan-400 text-xs tracking-[0.4em] animate-pulse">SYSTEM STARTUP</div>
-    </div>
-
     <!-- MAIN APP -->
     <div class="relative w-full max-w-[1600px] mx-auto min-h-screen flex flex-col p-4 md:p-6 lg:p-8">
         <!-- HEADER -->
@@ -189,7 +208,7 @@
                     <span class="material-symbols-rounded text-white text-2xl">satellite_alt</span>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold font-display uppercase tracking-widest text-white">Aether</h1>
+                    <h1 class="text-xl font-bold font-display uppercase tracking-widest text-white">Aether <span class="text-cyan-400 text-sm align-top opacity-50">v3</span></h1>
                     <div class="flex items-center gap-2">
                         <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
                         <span class="text-[10px] text-cyan-200 tracking-[0.2em] uppercase font-mono">Online</span>
@@ -204,7 +223,6 @@
                     <div class="relative flex items-center bg-white/5 border border-white/10 rounded-full px-5 py-3 backdrop-blur-md focus-within:bg-black/60 focus-within:border-cyan-400/50 transition-all shadow-lg">
                         <span class="material-symbols-rounded text-gray-400">search</span>
                         <input autocomplete="off" enterkeyhint="search" class="w-full bg-transparent border-none outline-none text-white ml-3 text-sm font-medium placeholder-gray-500 h-full" id="search-input" placeholder="Search global sector..." type="text">
-                        <!-- NEW: Clear Button -->
                         <button id="clear-btn" class="hidden text-gray-500 hover:text-white transition-colors">
                             <span class="material-symbols-rounded text-sm">close</span>
                         </button>
@@ -252,12 +270,12 @@
                     <div class="flex justify-between items-start z-10">
                         <div>
                             <div class="flex items-center gap-3 text-cyan-200/80 font-mono text-xs md:text-sm mb-3">
-                                <span id="local-time">--:--</span>
+                                <span class="skeleton" id="local-time">--:--</span>
                                 <span class="w-1 h-1 bg-cyan-400 rounded-full"></span>
-                                <span id="local-date">--</span>
+                                <span class="skeleton" id="local-date">Loading Date</span>
                             </div>
-                            <h2 class="fluid-h1 font-bold text-white leading-none tracking-tight text-glow" id="city-name">Loading...</h2>
-                            <p class="text-xl text-cyan-100 mt-2 font-medium capitalize opacity-90" id="weather-desc">...</p>
+                            <h2 class="fluid-h1 font-bold text-white leading-none tracking-tight text-glow skeleton" id="city-name" style="min-width: 200px; display: inline-block;">Loading...</h2>
+                            <p class="text-xl text-cyan-100 mt-2 font-medium capitalize opacity-90 skeleton" id="weather-desc" style="max-width: 150px;">Processing...</p>
                         </div>
                         <button class="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-pink-500 transition-colors shadow-xl border border-white/5" id="fav-btn">
                             <span class="material-symbols-rounded">favorite</span>
@@ -265,17 +283,17 @@
                     </div>
                     <div class="flex items-end justify-between mt-auto z-10">
                         <div class="flex items-start">
-                            <span class="fluid-temp font-bold text-white leading-[0.9] tracking-tighter text-glow" id="temp-val">--</span>
+                            <span class="fluid-temp font-bold text-white leading-[0.9] tracking-tighter text-glow skeleton" id="temp-val" style="min-width: 100px;">--</span>
                             <span class="text-4xl lg:text-6xl text-cyan-400 mt-2 font-light">°</span>
                         </div>
                         <div class="text-right space-y-1">
                             <div class="flex items-center justify-end gap-2 text-sm font-medium text-gray-300">
                                 <span>Feels Like</span>
-                                <span class="text-white text-xl font-bold" id="feels-val">--°</span>
+                                <span class="text-white text-xl font-bold skeleton" id="feels-val" style="min-width: 40px;">--°</span>
                             </div>
                             <div class="flex items-center justify-end gap-3 text-xs text-gray-400 mt-2">
-                                <span class="flex items-center gap-1"><span class="material-symbols-rounded text-base text-red-300">arrow_upward</span><span class="text-white" id="temp-max">--°</span></span>
-                                <span class="flex items-center gap-1"><span class="material-symbols-rounded text-base text-blue-300">arrow_downward</span><span class="text-white" id="temp-min">--°</span></span>
+                                <span class="flex items-center gap-1"><span class="material-symbols-rounded text-base text-red-300">arrow_upward</span><span class="text-white skeleton" id="temp-max">--°</span></span>
+                                <span class="flex items-center gap-1"><span class="material-symbols-rounded text-base text-blue-300">arrow_downward</span><span class="text-white skeleton" id="temp-min">--°</span></span>
                             </div>
                         </div>
                     </div>
@@ -305,8 +323,13 @@
                                         <span class="material-symbols-rounded text-cyan-300 text-2xl" id="ai-icon">check_circle</span>
                                     </div>
                                     <div>
-                                        <h4 class="font-bold text-white mb-1 text-base" id="ai-title">Analyzing...</h4>
-                                        <p class="text-sm text-gray-300 leading-relaxed" id="ai-text">Please wait while we process atmospheric data.</p>
+                                        <h4 class="font-bold text-white mb-1 text-base skeleton" id="ai-title" style="min-width: 100px;">Analyzing...</h4>
+                                        <p class="text-sm text-gray-300 leading-relaxed skeleton" id="ai-text" style="min-width: 200px;">Please wait while we process atmospheric data.</p>
+                                        <!-- NEW: Gear Recommendation -->
+                                        <div class="mt-3 flex items-center gap-2 text-xs font-mono text-cyan-200 bg-cyan-900/30 px-3 py-1.5 rounded-lg border border-cyan-500/20 skeleton" id="gear-text" style="display:inline-flex;">
+                                            <span class="material-symbols-rounded text-sm">apparel</span>
+                                            <span id="gear-msg">Calculating gear...</span>
+                                        </div>
                                         <div class="flex flex-wrap gap-2 mt-3" id="ai-tags"></div>
                                     </div>
                                 </div>
@@ -359,26 +382,26 @@
                             <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Wind</span>
                             <div class="flex items-center gap-1">
                                 <span class="material-symbols-rounded text-cyan-400 text-2xl transform transition-transform" id="wind-icon" style="transform: rotate(0deg);">navigation</span>
-                                <span class="text-xs font-bold text-white" id="wind-dir">--</span>
+                                <span class="text-xs font-bold text-white skeleton" id="wind-dir" style="min-width: 20px;">--</span>
                             </div>
-                            <div class="leading-none"><span class="text-lg font-bold text-white" id="wind-val">--</span> <span class="text-[10px] text-gray-400">km/h</span></div>
+                            <div class="leading-none"><span class="text-lg font-bold text-white skeleton" id="wind-val" style="min-width: 30px;">--</span> <span class="text-[10px] text-gray-400">km/h</span></div>
                             <div class="text-[9px] text-gray-500" id="wind-gusts">Gusts: --</div>
                         </div>
                         <div class="glass p-4 flex flex-col items-center justify-center text-center gap-2 hover:bg-white/5 transition-colors">
                             <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Humidity</span>
                             <span class="material-symbols-rounded text-blue-400 text-2xl">water_drop</span>
-                            <div class="leading-none"><span class="text-lg font-bold text-white" id="humid-val">--</span> <span class="text-[10px] text-gray-400">%</span></div>
+                            <div class="leading-none"><span class="text-lg font-bold text-white skeleton" id="humid-val" style="min-width: 30px;">--</span> <span class="text-[10px] text-gray-400">%</span></div>
                             <div class="text-[9px] text-gray-500">Dew: <span id="dew-val">--°</span></div>
                         </div>
                         <div class="glass p-4 flex flex-col items-center justify-center text-center gap-2 hover:bg-white/5 transition-colors">
                             <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Pressure</span>
                             <span class="material-symbols-rounded text-purple-300 text-2xl">compress</span>
-                            <div class="leading-none"><span class="text-lg font-bold text-white" id="pres-val">--</span> <span class="text-[10px] text-gray-400">hPa</span></div>
+                            <div class="leading-none"><span class="text-lg font-bold text-white skeleton" id="pres-val" style="min-width: 40px;">--</span> <span class="text-[10px] text-gray-400">hPa</span></div>
                         </div>
                         <div class="glass p-4 flex flex-col items-center justify-center text-center gap-2 hover:bg-white/5 transition-colors">
                             <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Visibility</span>
                             <span class="material-symbols-rounded text-yellow-200 text-2xl">visibility</span>
-                            <div class="leading-none"><span class="text-lg font-bold text-white" id="vis-val">--</span> <span class="text-[10px] text-gray-400">km</span></div>
+                            <div class="leading-none"><span class="text-lg font-bold text-white skeleton" id="vis-val" style="min-width: 30px;">--</span> <span class="text-[10px] text-gray-400">km</span></div>
                         </div>
                     </div>
                 </div>
@@ -397,29 +420,40 @@
 
             <!-- RIGHT COLUMN (Side) -->
             <div class="lg:col-span-4 flex flex-col gap-6">
-                <!-- Moon & Sun Cycle -->
-                <div class="glass p-6 flex flex-col gap-6">
-                    <!-- Sun -->
-                    <div class="flex items-center justify-between pb-4 border-b border-white/10">
-                        <div class="text-center">
-                            <span class="text-[9px] font-bold text-gray-500 uppercase mb-1 block">Sunrise</span>
-                            <div class="flex items-center gap-2 text-orange-300"><span class="material-symbols-rounded text-lg">wb_twilight</span><span class="font-mono font-bold text-sm" id="sunrise-val">--:--</span></div>
+                <!-- Moon & Sun Cycle (UPDATED) -->
+                <div class="glass p-6 flex flex-col gap-6 relative overflow-hidden">
+                    <!-- Solar Arc Visualizer -->
+                    <div class="relative w-full h-32 flex flex-col items-center justify-end">
+                        <div class="absolute inset-0 flex items-center justify-center text-[10px] text-gray-500 font-mono tracking-widest uppercase mb-6">Solar Tracker</div>
+                        
+                        <!-- The Arc -->
+                        <div class="relative w-full h-full">
+                            <svg viewBox="0 0 200 100" class="w-full h-full overflow-visible">
+                                <!-- Track -->
+                                <path d="M 10 90 A 90 90 0 0 1 190 90" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2" stroke-dasharray="4,4" />
+                                <!-- Sun/Moon Marker -->
+                                <g id="solar-marker" style="transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);">
+                                    <!-- Sun Glow -->
+                                    <circle cx="0" cy="0" r="8" fill="#fbbf24" class="opacity-0 transition-opacity duration-500" id="marker-sun" style="filter: drop-shadow(0 0 10px #fbbf24);"></circle>
+                                    <!-- Moon Glow -->
+                                    <circle cx="0" cy="0" r="6" fill="#e2e8f0" class="opacity-0 transition-opacity duration-500" id="marker-moon" style="filter: drop-shadow(0 0 8px rgba(255,255,255,0.8));"></circle>
+                                </g>
+                            </svg>
                         </div>
-                        <div class="h-8 w-px bg-white/10"></div>
-                        <div class="text-center">
-                            <span class="text-[9px] font-bold text-gray-500 uppercase mb-1 block">Sunset</span>
-                            <div class="flex items-center gap-2 text-indigo-300"><span class="material-symbols-rounded text-lg">bedtime</span><span class="font-mono font-bold text-sm" id="sunset-val">--:--</span></div>
+
+                        <!-- Times -->
+                        <div class="absolute bottom-0 w-full flex justify-between text-xs font-bold text-gray-400 px-2">
+                            <span id="sunrise-val">--:--</span>
+                            <span id="sunset-val">--:--</span>
                         </div>
                     </div>
+
                     <!-- Moon Phase -->
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 shrink-0" id="moon-ui-container">
-                            <!-- SVG injected via JS -->
-                        </div>
+                    <div class="flex items-center gap-4 pt-4 border-t border-white/10">
+                        <div class="w-10 h-10 shrink-0" id="moon-ui-container"></div>
                         <div>
-                            <div class="text-[9px] font-bold text-gray-500 uppercase mb-1">Moon Phase</div>
-                            <div class="text-sm font-bold text-white" id="moon-text">--</div>
-                            <div class="text-xs text-gray-400" id="moon-pct">--% Lit</div>
+                            <div class="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Moon Phase</div>
+                            <div class="text-xs font-bold text-white" id="moon-text">--</div>
                         </div>
                     </div>
                 </div>
@@ -459,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: null,
         chart: null,
         timer: null,
-        animationId: null, // Track canvas loop
+        animationId: null,
         favorites: JSON.parse(localStorage.getItem('aether_favs_v12')) || ['London', 'Tokyo', 'New York']
     };
 
@@ -467,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = id => document.getElementById(id);
     const ui = {
         // Loading & Search
-        loader: el('loader'), dashboard: el('dashboard'), input: el('search-input'), suggestions: el('suggestions'), clearBtn: el('clear-btn'),
+        dashboard: el('dashboard'), input: el('search-input'), suggestions: el('suggestions'), clearBtn: el('clear-btn'),
         gpsBtn: el('gps-btn'), btnC: el('btn-c'), btnF: el('btn-f'), unitPill: el('unit-pill'),
         // Main Data
         city: el('city-name'), desc: el('weather-desc'), temp: el('temp-val'), feels: el('feels-val'),
@@ -480,10 +514,11 @@ document.addEventListener('DOMContentLoaded', () => {
         pm25: el('pm25-val'), no2: el('no2-val'), o3: el('o3-val'),
         // Assistant
         aiTitle: el('ai-title'), aiText: el('ai-text'), aiIcon: el('ai-icon'), aiTags: el('ai-tags'),
+        gearText: el('gear-text'), gearMsg: el('gear-msg'),
         actRun: el('act-run'), actDrive: el('act-drive'), actOut: el('act-out'), actHealth: el('act-health'),
         // Astro & Charts
-        sunrise: el('sunrise-val'), sunset: el('sunset-val'),
-        moonUI: el('moon-ui-container'), moonText: el('moon-text'), moonPct: el('moon-pct'),
+        sunrise: el('sunrise-val'), sunset: el('sunset-val'), solarMarker: el('solar-marker'), markerSun: el('marker-sun'), markerMoon: el('marker-moon'),
+        moonUI: el('moon-ui-container'), moonText: el('moon-text'),
         forecast: el('forecast-list'), chartCanvas: el('chart-canvas'), radar: el('radar-frame'),
         alert: el('alert-box'), alertMsg: el('alert-msg'),
         // Visuals
@@ -515,11 +550,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let d = "";
         if(phase > 0.48 && phase < 0.52) {
             d = `M ${cx},0 A ${r},${r} 0 1,1 ${cx},${size} A ${r},${r} 0 1,1 ${cx},0`; 
-        } else if(phase < 0.02 || phase > 0.98) {
-            d = ""; 
-        } else {
-            d = `M ${cx},0 A ${r},${r} 0 0,${outerDir} ${cx},${size} A ${tr},${r} 0 0,${innerDir} ${cx},0`;
-        }
+        } else if(phase < 0.02 || phase > 0.98) { d = ""; } 
+        else { d = `M ${cx},0 A ${r},${r} 0 0,${outerDir} ${cx},${size} A ${tr},${r} 0 0,${innerDir} ${cx},0`; }
 
         return `
         <svg viewBox="0 0 ${size} ${size}" class="moon-svg">
@@ -541,14 +573,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const phase = getMoonPhase(new Date());
             container.innerHTML = createMoonSVG(phase, 160, "#f8fafc");
             container.style.filter = 'drop-shadow(0 0 30px rgba(255,255,255,0.3))';
-            updateMoonWidget(phase);
         }
     }
 
     function updateMoonWidget(phase) {
-        ui.moonUI.innerHTML = createMoonSVG(phase, 48, "#ffffff");
-        const pct = phase <= 0.5 ? phase*2 : (1-phase)*2;
-        ui.moonPct.textContent = `${Math.round(pct*100)}% Lit`;
+        ui.moonUI.innerHTML = createMoonSVG(phase, 40, "#ffffff");
         let name = "New Moon";
         if(phase>0.02 && phase<0.23) name="Waxing Crescent";
         else if(phase>=0.23 && phase<0.27) name="First Quarter";
@@ -560,165 +589,111 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.moonText.textContent = name;
     }
 
-    // --- VISUAL ENGINE (Canvas & CSS) ---
+    // --- VISUAL ENGINE ---
     const canvasS = ui.starCanvas.getContext('2d');
     const canvasP = ui.precipCanvas.getContext('2d');
     let w, h, stars=[], particles=[];
 
     function resize() { w=window.innerWidth; h=window.innerHeight; ui.starCanvas.width=ui.precipCanvas.width=w; ui.starCanvas.height=ui.precipCanvas.height=h; initStars(); }
     window.addEventListener('resize', resize);
-
-    function initStars() {
-        stars=[];
-        for(let i=0; i<150; i++) stars.push({x:Math.random()*w, y:Math.random()*h, s:Math.random()*1.5, a:Math.random()});
-    }
-
+    function initStars() { stars=[]; for(let i=0; i<150; i++) stars.push({x:Math.random()*w, y:Math.random()*h, s:Math.random()*1.5, a:Math.random()}); }
     function loop() {
         canvasS.clearRect(0,0,w,h); canvasP.clearRect(0,0,w,h);
-        // Draw Stars
         if(ui.starCanvas.style.opacity === '1') {
             canvasS.fillStyle="#fff";
-            stars.forEach(s=>{ 
-                canvasS.globalAlpha=s.a; canvasS.beginPath(); canvasS.arc(s.x,s.y,s.s,0,Math.PI*2); canvasS.fill(); 
-                if(Math.random()>0.99) s.a=Math.random();
-            });
+            stars.forEach(s=>{ canvasS.globalAlpha=s.a; canvasS.beginPath(); canvasS.arc(s.x,s.y,s.s,0,Math.PI*2); canvasS.fill(); if(Math.random()>0.99) s.a=Math.random(); });
         }
-        // Draw Precip
         particles.forEach(p => {
             p.y += p.vy; if(p.type==='snow') p.x+=Math.sin(p.y*0.01);
             if(p.y>h) { p.y=-10; p.x=Math.random()*w; }
             canvasP.beginPath();
-            if(p.type==='rain') {
-                canvasP.strokeStyle='rgba(200,230,255,0.4)'; canvasP.lineWidth=1; canvasP.moveTo(p.x,p.y); canvasP.lineTo(p.x,p.y+p.len); canvasP.stroke();
-            } else {
-                canvasP.fillStyle='rgba(255,255,255,0.8)'; canvasP.arc(p.x,p.y,p.s,0,Math.PI*2); canvasP.fill();
-            }
+            if(p.type==='rain') { canvasP.strokeStyle='rgba(200,230,255,0.4)'; canvasP.lineWidth=1; canvasP.moveTo(p.x,p.y); canvasP.lineTo(p.x,p.y+p.len); canvasP.stroke(); } 
+            else { canvasP.fillStyle='rgba(255,255,255,0.8)'; canvasP.arc(p.x,p.y,p.s,0,Math.PI*2); canvasP.fill(); }
         });
         STATE.animationId = requestAnimationFrame(loop);
     }
-    
-    // BATTERY SAVER: Pause animation when tab is hidden
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-            if (STATE.animationId) cancelAnimationFrame(STATE.animationId);
-        } else {
-            loop();
-        }
-    });
-    
+    document.addEventListener("visibilitychange", () => { if (document.hidden) { if (STATE.animationId) cancelAnimationFrame(STATE.animationId); } else { loop(); } });
     resize(); loop();
 
-    // EXPANDED WEATHER CODES
     const weatherMeta = {
         0: { type: 'clear', day:['#0ea5e9','#93c5fd'], night:['#020617','#1e1b4b'] },
         1: { type: 'clear', day:['#38bdf8','#bae6fd'], night:['#0f172a','#172554'] },
         2: { type: 'cloudy', day:['#475569','#94a3b8'], night:['#1e293b','#334155'] },
         3: { type: 'overcast', day:['#334155','#64748b'], night:['#0f172a','#1e293b'] },
-        45: { type: 'fog', day:['#6b7280','#9ca3af'], night:['#1f2937','#374151'] },
-        48: { type: 'fog', day:['#6b7280','#9ca3af'], night:['#1f2937','#374151'] },
-        51: { type: 'rain', day:['#2563eb','#60a5fa'], night:['#172554','#1e40af'] },
-        53: { type: 'rain', day:['#2563eb','#60a5fa'], night:['#172554','#1e40af'] },
-        55: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] },
-        56: { type: 'rain', day:['#2563eb','#60a5fa'], night:['#172554','#1e40af'] },
-        57: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] },
-        61: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] },
-        63: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] },
-        65: { type: 'rain', day:['#1e40af','#60a5fa'], night:['#172554','#172554'] },
-        66: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] },
-        67: { type: 'rain', day:['#1e40af','#60a5fa'], night:['#172554','#172554'] },
-        71: { type: 'snow', day:['#bae6fd','#e0f2fe'], night:['#1e293b','#334155'] },
-        73: { type: 'snow', day:['#bae6fd','#e0f2fe'], night:['#1e293b','#334155'] },
-        75: { type: 'snow', day:['#bae6fd','#e0f2fe'], night:['#1e293b','#334155'] },
-        77: { type: 'snow', day:['#bae6fd','#e0f2fe'], night:['#1e293b','#334155'] },
-        80: { type: 'rain', day:['#2563eb','#60a5fa'], night:['#172554','#1e40af'] },
-        81: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] },
-        82: { type: 'rain', day:['#1e40af','#60a5fa'], night:['#172554','#172554'] },
-        85: { type: 'snow', day:['#bae6fd','#e0f2fe'], night:['#1e293b','#334155'] },
-        86: { type: 'snow', day:['#bae6fd','#e0f2fe'], night:['#1e293b','#334155'] },
-        95: { type: 'storm', day:['#4c1d95','#6d28d9'], night:['#2e1065','#581c87'] },
-        96: { type: 'storm', day:['#4c1d95','#6d28d9'], night:['#2e1065','#581c87'] },
-        99: { type: 'storm', day:['#4c1d95','#6d28d9'], night:['#2e1065','#581c87'] }
+        45: { type: 'fog', day:['#6b7280','#9ca3af'], night:['#1f2937','#374151'] }, 48: { type: 'fog', day:['#6b7280','#9ca3af'], night:['#1f2937','#374151'] },
+        51: { type: 'rain', day:['#2563eb','#60a5fa'], night:['#172554','#1e40af'] }, 53: { type: 'rain', day:['#2563eb','#60a5fa'], night:['#172554','#1e40af'] },
+        55: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] }, 56: { type: 'rain', day:['#2563eb','#60a5fa'], night:['#172554','#1e40af'] },
+        61: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] }, 63: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] },
+        71: { type: 'snow', day:['#bae6fd','#e0f2fe'], night:['#1e293b','#334155'] }, 73: { type: 'snow', day:['#bae6fd','#e0f2fe'], night:['#1e293b','#334155'] },
+        80: { type: 'rain', day:['#2563eb','#60a5fa'], night:['#172554','#1e40af'] }, 81: { type: 'rain', day:['#1d4ed8','#3b82f6'], night:['#172554','#1e3a8a'] },
+        95: { type: 'storm', day:['#4c1d95','#6d28d9'], night:['#2e1065','#581c87'] }, 96: { type: 'storm', day:['#4c1d95','#6d28d9'], night:['#2e1065','#581c87'] }
     };
 
     function setAtmosphere(code, isDay) {
         const meta = weatherMeta[code] || weatherMeta[0];
         const type = meta.type;
         const c = isDay ? meta.day : meta.night;
-        
-        // Gradient
         ui.sky.style.background = `linear-gradient(to bottom, ${c[0]}, ${c[1]})`;
         
-        // Aurora (Colors)
         ui.aurora.innerHTML = '';
         let color = isDay ? (type==='storm'?'bg-purple-500':'bg-cyan-400') : (type==='storm'?'bg-purple-900':'bg-blue-900');
         ui.aurora.innerHTML = `<div class="aurora-blob ${color} w-[600px] h-[600px] top-[-20%] left-[-10%]"></div>`;
 
-        // Celestial
         updateCelestial(isDay);
         ui.celestial.style.opacity = (type==='overcast'||type==='storm'||type==='fog') ? '0.2' : '1';
-        
-        // Layers Visibility
         ui.starCanvas.style.opacity = (!isDay && type==='clear') ? '1' : '0';
         ui.mist.style.opacity = type==='fog' ? '1' : '0';
         ui.cloudsBack.style.opacity = (type==='cloudy'||type==='overcast'||type==='storm') ? '0.6' : '0';
         ui.cloudsFront.style.opacity = (type==='overcast'||type==='storm') ? '0.8' : '0';
 
-        // Generate Clouds
         ui.cloudsBack.innerHTML = ''; ui.cloudsFront.innerHTML = '';
         if(type.includes('cloud') || type==='overcast' || type==='storm') {
             const count = type==='cloudy'?5:12;
             for(let i=0; i<count; i++) {
-                const cl = document.createElement('div');
-                cl.className = 'cloud';
-                const s = Math.random()*300+150;
-                cl.style.width=s+'px'; cl.style.height=s+'px';
+                const cl = document.createElement('div'); cl.className = 'cloud';
+                const s = Math.random()*300+150; cl.style.width=s+'px'; cl.style.height=s+'px';
                 cl.style.top=Math.random()*60+'%'; cl.style.left=Math.random()*100+'vw';
                 cl.style.animationDuration = (Math.random()*60+60)+'s';
                 if(i%2===0) ui.cloudsBack.appendChild(cl); else ui.cloudsFront.appendChild(cl);
             }
         }
-
-        // Precip Particles
         particles = [];
         if(type==='rain'||type==='storm') for(let i=0;i<400;i++) particles.push({x:Math.random()*w,y:Math.random()*h,vy:Math.random()*15+15,len:20,type:'rain'});
         if(type==='snow') for(let i=0;i<200;i++) particles.push({x:Math.random()*w,y:Math.random()*h,vy:Math.random()*2+1,s:Math.random()*3+1,type:'snow'});
-
-        // Lightning
         if(type==='storm') triggerLightning();
     }
-
     function triggerLightning() {
-        const f = document.createElement('div');
-        f.className = 'flash-anim';
-        ui.lightning.appendChild(f);
-        setTimeout(()=>f.remove(), 300);
-        setTimeout(triggerLightning, Math.random()*5000+2000);
+        const f = document.createElement('div'); f.className = 'flash-anim'; ui.lightning.appendChild(f);
+        setTimeout(()=>f.remove(), 300); setTimeout(triggerLightning, Math.random()*5000+2000);
     }
 
-    // --- DATA LOGIC ---
+    // --- LOGIC ---
+    function toggleSkeleton(loading) {
+        document.body.classList.toggle('loaded', !loading);
+    }
+
     async function fetchWeather(lat, lon, name) {
-        ui.loader.classList.remove('opacity-0','pointer-events-none');
+        toggleSkeleton(true);
         try {
             const [w, a] = await Promise.all([
                 fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
                 fetch(`${CONFIG.aqi}?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,nitrogen_dioxide,ozone`).then(r=>r.json())
             ]);
             STATE.data = { ...w, aqi: a.current, cityName: name };
-            renderUI();
-            setTimeout(() => { ui.loader.classList.add('opacity-0','pointer-events-none'); ui.dashboard.classList.remove('opacity-0'); }, 500);
-        } catch(e) { 
-            console.error(e); 
-            ui.loader.classList.add('opacity-0','pointer-events-none'); 
-            // Minimal error handling feedback could go here
-            ui.city.textContent = "Connection Error";
-            ui.desc.textContent = "Try again later";
-        }
+            // Simulate minimal network delay for skeleton effect demonstration
+            setTimeout(() => { renderUI(); toggleSkeleton(false); }, 600);
+        } catch(e) { console.error(e); ui.city.textContent = "Error"; }
     }
 
     function renderUI() {
         const d = STATE.data;
         const cur = d.current;
         const isDay = cur.is_day === 1;
+        
+        // Moon Phase (Always update widget)
+        const phase = getMoonPhase(new Date());
+        updateMoonWidget(phase);
+
         setAtmosphere(cur.weather_code, isDay);
 
         // Main
@@ -732,8 +707,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!STATE.metric) { const f=c=>c*1.8+32; t=f(t); fl=f(fl); mx=f(mx); mn=f(mn); }
         ui.temp.textContent = Math.round(t); ui.feels.textContent = Math.round(fl)+'°';
         ui.tempMax.textContent = Math.round(mx)+'°'; ui.tempMin.textContent = Math.round(mn)+'°';
-        
-        // Dynamic Title
         document.title = `${d.cityName} • ${Math.round(t)}° | Aether`;
 
         // Clock
@@ -742,9 +715,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             ui.time.textContent = now.toLocaleTimeString('en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit',hour12:false});
             ui.date.textContent = now.toLocaleDateString('en-US',{timeZone:d.timezone,weekday:'short',month:'short',day:'numeric'});
+            updateSolarTracker(d.daily.sunrise[0], d.daily.sunset[0], d.timezone);
         }; tick(); STATE.timer = setInterval(tick,1000);
 
-        // Assistant
+        // GEAR ADVISOR LOGIC
+        let gear = "Standard kit. Conditions normal.";
+        const c = cur.weather_code;
+        if(c >= 95) gear = "Hazard suit. Stay indoors.";
+        else if(c >= 71) gear = "Thermal layers & heavy coat required.";
+        else if(c >= 51 || cur.precipitation > 0) gear = "Waterproof shell & umbrella advised.";
+        else if(cur.wind_speed_10m > 30) gear = "Windbreaker recommended.";
+        else if(t < (STATE.metric?5:41)) gear = "Warm coat & gloves needed.";
+        else if(t > (STATE.metric?25:77)) gear = "Breathable fabrics & sunglasses.";
+        else if(cur.uv_index > 6) gear = "Sun protection required.";
+        ui.gearMsg.textContent = gear;
+
+        // Assistant Risk
         let tags = [], risk = 0;
         if(cur.weather_code>=95) { tags.push("STORM"); risk=2; }
         if(cur.precipitation>0) { tags.push("RAIN"); risk=1; }
@@ -752,15 +738,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(t < (STATE.metric?5:41)) { tags.push("FREEZING"); risk=1; }
         
         ui.aiTitle.textContent = risk===2?"Hazardous":risk===1?"Caution":"Optimal";
-        ui.aiText.textContent = risk===2?"Severe weather conditions detected. Seek shelter." : risk===1?"Atmosphere unstable. Prepare accordingly." : "Conditions are stable. Enjoy your day.";
+        ui.aiText.textContent = risk===2?"Severe weather. Seek shelter." : risk===1?"Atmosphere unstable. Prepare accordingly." : "Conditions are stable. Proceed with operations.";
         ui.aiIcon.textContent = risk===2?"warning":risk===1?"info":"check_circle";
         ui.aiTags.innerHTML = tags.map(t=>`<span class="px-2 py-0.5 rounded bg-cyan-500/20 text-[10px] font-bold text-cyan-200 border border-cyan-500/30">${t}</span>`).join('');
-
-        // Activities
-        ui.actRun.textContent = (risk>0)?"Poor":"Great"; ui.actRun.className = `text-sm font-bold ${risk>0?'text-red-400':'text-green-400'}`;
-        ui.actDrive.textContent = (cur.visibility<2000||cur.precipitation>0)?"Hazard":"Good"; 
-        ui.actOut.textContent = (risk>0)?"Limit":"Enjoy";
-        ui.actHealth.textContent = (d.aqi.us_aqi>100)?"Risk":"Good";
 
         // Metrics
         ui.windVal.textContent = Math.round(cur.wind_speed_10m);
@@ -775,15 +755,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.uvVal.textContent = cur.uv_index.toFixed(1);
         ui.uvBar.style.width = Math.min((cur.uv_index/11)*100,100)+'%';
         
-        // AQI
         ui.aqiBadge.textContent = d.aqi.us_aqi<=50?'Good':d.aqi.us_aqi<=100?'Moderate':'Poor';
         ui.aqiBadge.className = `text-xs font-bold px-2 py-1 rounded bg-${d.aqi.us_aqi<=50?'green':d.aqi.us_aqi<=100?'yellow':'red'}-500/20 text-${d.aqi.us_aqi<=50?'green':d.aqi.us_aqi<=100?'yellow':'red'}-400`;
         ui.pm25.textContent = d.aqi.pm2_5; ui.no2.textContent = d.aqi.nitrogen_dioxide; ui.o3.textContent = d.aqi.ozone;
-
-        // Solar
-        const sr = new Date(d.daily.sunrise[0]), ss = new Date(d.daily.sunset[0]);
-        ui.sunrise.textContent = sr.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
-        ui.sunset.textContent = ss.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
 
         // Forecast List
         ui.forecast.innerHTML = '';
@@ -803,16 +777,76 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.forecast.appendChild(row);
         }
 
-        // Alert
-        if(cur.weather_code>=95 || cur.wind_speed_10m > 60) {
-            ui.alert.classList.remove('hidden');
-            ui.alertMsg.textContent = cur.weather_code>=95 ? "Severe Thunderstorm Warning" : "High Wind Advisory";
-        } else ui.alert.classList.add('hidden');
-
-        // Chart & Radar
         renderChart(d.hourly);
         ui.radar.src = `https://embed.windy.com/embed.html?lat=${d.latitude}&lon=${d.longitude}&zoom=7&overlay=rain&menu=&metricWind=${STATE.metric?'kmh':'kt'}&metricTemp=${STATE.metric?'°C':'°F'}&isolines=false`;
         renderFavs();
+    }
+
+    // SOLAR TRACKER LOGIC
+    function updateSolarTracker(sunriseStr, sunsetStr, timezone) {
+        // Convert API ISO strings to Date objects relative to current day
+        const now = new Date();
+        const sunrise = new Date(sunriseStr);
+        const sunset = new Date(sunsetStr);
+        
+        // Ensure accurate dates for calculation
+        const nowTime = now.getTime();
+        const riseTime = sunrise.getTime();
+        const setTime = sunset.getTime();
+        
+        ui.sunrise.textContent = sunrise.toLocaleTimeString('en-US',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hour12:false});
+        ui.sunset.textContent = sunset.toLocaleTimeString('en-US',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hour12:false});
+
+        let pct = 0; // 0 = left (rise), 1 = right (set)
+        const isDay = nowTime >= riseTime && nowTime <= setTime;
+        
+        if (isDay) {
+            // Day: Move Sun
+            pct = (nowTime - riseTime) / (setTime - riseTime);
+            ui.markerSun.classList.remove('opacity-0');
+            ui.markerMoon.classList.add('opacity-0');
+        } else {
+            // Night: Move Moon (Inverse logic for visual loop)
+            // If before sunrise, it's late night. If after sunset, early night.
+            ui.markerSun.classList.add('opacity-0');
+            ui.markerMoon.classList.remove('opacity-0');
+            
+            // Simplified night tracking for visual loop (not astronomically perfect but visually consistent)
+            // Maps night duration to 0-1 range
+            const prevSunset = setTime - 86400000; 
+            const nextSunrise = riseTime + 86400000; 
+            
+            if(nowTime > setTime) {
+                // Evening until midnight
+                 pct = (nowTime - setTime) / (nextSunrise - setTime); // 0 to 0.5 roughly
+            } else {
+                // Midnight until sunrise
+                 pct = (nowTime - (riseTime - 43200000)) / 43200000; // rough estimation
+            }
+        }
+
+        // Clamp 0-1
+        pct = Math.max(0, Math.min(1, pct));
+        
+        // Map 0-1 to X/Y coordinates on a 200x100 SVG
+        // Path: M 10 90 A 90 90 0 0 1 190 90
+        // Center is (100, 90), Radius 90.
+        // Angle goes from 180 (PI) at rise to 360/0 (0) at set? 
+        // Arc command uses clockwise.
+        // Let's use simple trigonometry for placement
+        // Angle: Start at PI (180 deg, left), End at 0 (0 deg, right).
+        // Actually for the arc A 90 90, we want to traverse from 180 degrees to 0 degrees (counter-clockwise visual, but SVG coord system y is down)
+        // Correct angle: Rise = 180 deg, Set = 0 deg.
+        
+        const angle = Math.PI - (pct * Math.PI); // PI -> 0
+        const r = 90;
+        const cx = 100;
+        const cy = 90;
+        
+        const x = cx + r * Math.cos(angle);
+        const y = cy - r * Math.sin(angle);
+        
+        ui.solarMarker.style.transform = `translate(${x}px, ${y}px)`;
     }
 
     function renderChart(hourly) {
@@ -825,56 +859,18 @@ document.addEventListener('DOMContentLoaded', () => {
             labels.push(`${(now+i)%24}:00`);
             let t = hourly.temperature_2m[now+i];
             if(!STATE.metric) t=t*1.8+32;
-            data.push(t);
-            sumTemp += t;
+            data.push(t); sumTemp += t;
             rain.push(hourly.precipitation_probability[now+i]);
         }
-        
-        // Determine Color Scheme based on avg temp
-        const avg = sumTemp / 24;
-        const isHot = STATE.metric ? avg > 25 : avg > 77;
-        const color = isHot ? '#f97316' : '#22d3ee'; // Orange vs Cyan
-        const bgStop = isHot ? 'rgba(249, 115, 22, 0.3)' : 'rgba(34, 211, 238, 0.3)';
-        const bgStopEnd = isHot ? 'rgba(249, 115, 22, 0)' : 'rgba(34, 211, 238, 0)';
-
+        const avg = sumTemp / 24; const isHot = STATE.metric ? avg > 25 : avg > 77;
+        const color = isHot ? '#f97316' : '#22d3ee';
         STATE.chart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    { 
-                        label:'Temp', 
-                        data, 
-                        borderColor: color, 
-                        backgroundColor:(c)=>{
-                            const g=c.chart.ctx.createLinearGradient(0,0,0,200);
-                            g.addColorStop(0, bgStop);
-                            g.addColorStop(1, bgStopEnd);
-                            return g;
-                        }, 
-                        borderWidth:2, 
-                        tension:0.4, 
-                        fill:true, 
-                        yAxisID:'y'
-                    },
-                    { 
-                        label:'Rain %', 
-                        data:rain, 
-                        borderColor:'#3b82f6', 
-                        borderDash:[5,5], 
-                        borderWidth:1, 
-                        pointRadius:0, 
-                        fill:false, 
-                        yAxisID:'y1' 
-                    }
-                ]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins:{ legend:{display:false} }, 
-                scales:{ x:{display:false}, y:{display:false}, y1:{display:false, min:0, max:100} } 
-            }
+            data: { labels, datasets: [
+                { label:'Temp', data, borderColor: color, backgroundColor:(c)=>{const g=c.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,isHot?'rgba(249,115,22,0.3)':'rgba(34,211,238,0.3)');g.addColorStop(1,'rgba(0,0,0,0)');return g;}, borderWidth:2, tension:0.4, fill:true, yAxisID:'y'},
+                { label:'Rain %', data:rain, borderColor:'#3b82f6', borderDash:[5,5], borderWidth:1, pointRadius:0, fill:false, yAxisID:'y1' }
+            ]},
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false}, y:{display:false}, y1:{display:false, min:0, max:100}} }
         });
     }
 
@@ -882,23 +878,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(t => {
         t.onclick = () => {
-            tabs.forEach(b => b.classList.remove('active'));
-            t.classList.add('active');
+            tabs.forEach(b => b.classList.remove('active')); t.classList.add('active');
             ['tab-overview','tab-health','tab-activity'].forEach(id => {
                 const p = el(id);
-                if(id === t.dataset.tab) { p.style.opacity='1'; p.style.pointerEvents='auto'; }
-                else { p.style.opacity='0'; p.style.pointerEvents='none'; }
+                if(id === t.dataset.tab) { p.style.opacity='1'; p.style.pointerEvents='auto'; } else { p.style.opacity='0'; p.style.pointerEvents='none'; }
             });
         };
     });
 
     let debounce;
-    // Search Logic with Enter Key support and Clear Button
     ui.input.addEventListener('input', e => {
         const q = e.target.value;
-        if(q.length > 0) ui.clearBtn.classList.remove('hidden'); 
-        else ui.clearBtn.classList.add('hidden');
-
+        if(q.length > 0) ui.clearBtn.classList.remove('hidden'); else ui.clearBtn.classList.add('hidden');
         clearTimeout(debounce);
         debounce = setTimeout(async () => {
             if(q.length<3) { ui.suggestions.classList.add('hidden'); return; }
@@ -906,36 +897,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.suggestions.innerHTML = '';
             if(r.results) {
                 r.results.forEach(p => {
-                    const d = document.createElement('div');
-                    d.className = "px-5 py-3 hover:bg-cyan-500/20 cursor-pointer text-sm text-white border-b border-white/5 flex justify-between";
+                    const d = document.createElement('div'); d.className = "px-5 py-3 hover:bg-cyan-500/20 cursor-pointer text-sm text-white border-b border-white/5 flex justify-between";
                     d.innerHTML = `<span>${p.name}</span><span class="text-xs text-gray-500 font-bold uppercase">${p.country}</span>`;
                     d.onclick = () => { fetchWeather(p.latitude, p.longitude, p.name); ui.input.value=''; ui.clearBtn.classList.add('hidden'); ui.suggestions.classList.add('hidden'); };
                     ui.suggestions.appendChild(d);
-                });
-                ui.suggestions.classList.remove('hidden');
+                }); ui.suggestions.classList.remove('hidden');
             }
         }, 300);
     });
-
-    ui.input.addEventListener('keydown', e => {
-        if(e.key === 'Enter' && ui.suggestions.children.length > 0) {
-            ui.suggestions.children[0].click();
-            ui.input.blur();
-        }
-    });
-
-    ui.clearBtn.onclick = () => {
-        ui.input.value = '';
-        ui.clearBtn.classList.add('hidden');
-        ui.suggestions.classList.add('hidden');
-        ui.input.focus();
-    };
+    ui.input.addEventListener('keydown', e => { if(e.key === 'Enter' && ui.suggestions.children.length > 0) { ui.suggestions.children[0].click(); ui.input.blur(); } });
+    ui.clearBtn.onclick = () => { ui.input.value = ''; ui.clearBtn.classList.add('hidden'); ui.suggestions.classList.add('hidden'); ui.input.focus(); };
 
     const setUnit = (m) => { STATE.metric=m; ui.unitPill.style.transform=m?'translateX(0)':'translateX(100%)'; ui.btnC.style.color=m?'#fff':'#6b7280'; ui.btnF.style.color=!m?'#fff':'#6b7280'; renderUI(); };
     ui.btnC.onclick = () => setUnit(true); ui.btnF.onclick = () => setUnit(false);
     ui.gpsBtn.onclick = () => navigator.geolocation.getCurrentPosition(p => fetchWeather(p.coords.latitude, p.coords.longitude, "My Location"));
 
-    // Favorites
     function renderFavs() {
         ui.favBar.innerHTML = ''; ui.favBar.classList.remove('opacity-0');
         const isFav = STATE.favorites.includes(STATE.data.cityName);
@@ -954,7 +930,6 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('aether_favs_v12', JSON.stringify(STATE.favorites)); renderFavs();
     };
 
-    // Init
     fetchWeather(51.5074, -0.1278, "London");
     document.addEventListener('click', e => { if(!el('search-input').contains(e.target) && !ui.clearBtn.contains(e.target)) ui.suggestions.classList.add('hidden'); });
 });
