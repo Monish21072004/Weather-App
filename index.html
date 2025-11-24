@@ -203,7 +203,11 @@
                 <div class="search-box w-full sm:w-80">
                     <div class="relative flex items-center bg-white/5 border border-white/10 rounded-full px-5 py-3 backdrop-blur-md focus-within:bg-black/60 focus-within:border-cyan-400/50 transition-all shadow-lg">
                         <span class="material-symbols-rounded text-gray-400">search</span>
-                        <input autocomplete="off" class="w-full bg-transparent border-none outline-none text-white ml-3 text-sm font-medium placeholder-gray-500 h-full" id="search-input" placeholder="Search global sector..." type="text">
+                        <input autocomplete="off" enterkeyhint="search" class="w-full bg-transparent border-none outline-none text-white ml-3 text-sm font-medium placeholder-gray-500 h-full" id="search-input" placeholder="Search global sector..." type="text">
+                        <!-- NEW: Clear Button -->
+                        <button id="clear-btn" class="hidden text-gray-500 hover:text-white transition-colors">
+                            <span class="material-symbols-rounded text-sm">close</span>
+                        </button>
                     </div>
                     <div class="hidden" id="suggestions"></div>
                 </div>
@@ -455,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: null,
         chart: null,
         timer: null,
+        animationId: null, // Track canvas loop
         favorites: JSON.parse(localStorage.getItem('aether_favs_v12')) || ['London', 'Tokyo', 'New York']
     };
 
@@ -462,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = id => document.getElementById(id);
     const ui = {
         // Loading & Search
-        loader: el('loader'), dashboard: el('dashboard'), input: el('search-input'), suggestions: el('suggestions'),
+        loader: el('loader'), dashboard: el('dashboard'), input: el('search-input'), suggestions: el('suggestions'), clearBtn: el('clear-btn'),
         gpsBtn: el('gps-btn'), btnC: el('btn-c'), btnF: el('btn-f'), unitPill: el('unit-pill'),
         // Main Data
         city: el('city-name'), desc: el('weather-desc'), temp: el('temp-val'), feels: el('feels-val'),
@@ -589,11 +594,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvasP.fillStyle='rgba(255,255,255,0.8)'; canvasP.arc(p.x,p.y,p.s,0,Math.PI*2); canvasP.fill();
             }
         });
-        requestAnimationFrame(loop);
+        STATE.animationId = requestAnimationFrame(loop);
     }
+    
+    // BATTERY SAVER: Pause animation when tab is hidden
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            if (STATE.animationId) cancelAnimationFrame(STATE.animationId);
+        } else {
+            loop();
+        }
+    });
+    
     resize(); loop();
 
-    // EXPANDED WEATHER CODES to fix missing data bugs
+    // EXPANDED WEATHER CODES
     const weatherMeta = {
         0: { type: 'clear', day:['#0ea5e9','#93c5fd'], night:['#020617','#1e1b4b'] },
         1: { type: 'clear', day:['#38bdf8','#bae6fd'], night:['#0f172a','#172554'] },
@@ -691,7 +706,13 @@ document.addEventListener('DOMContentLoaded', () => {
             STATE.data = { ...w, aqi: a.current, cityName: name };
             renderUI();
             setTimeout(() => { ui.loader.classList.add('opacity-0','pointer-events-none'); ui.dashboard.classList.remove('opacity-0'); }, 500);
-        } catch(e) { console.error(e); ui.loader.classList.add('opacity-0','pointer-events-none'); }
+        } catch(e) { 
+            console.error(e); 
+            ui.loader.classList.add('opacity-0','pointer-events-none'); 
+            // Minimal error handling feedback could go here
+            ui.city.textContent = "Connection Error";
+            ui.desc.textContent = "Try again later";
+        }
     }
 
     function renderUI() {
@@ -711,6 +732,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!STATE.metric) { const f=c=>c*1.8+32; t=f(t); fl=f(fl); mx=f(mx); mn=f(mn); }
         ui.temp.textContent = Math.round(t); ui.feels.textContent = Math.round(fl)+'°';
         ui.tempMax.textContent = Math.round(mx)+'°'; ui.tempMin.textContent = Math.round(mn)+'°';
+        
+        // Dynamic Title
+        document.title = `${d.cityName} • ${Math.round(t)}° | Aether`;
 
         // Clock
         if(STATE.timer) clearInterval(STATE.timer);
@@ -796,20 +820,53 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = ui.chartCanvas.getContext('2d');
         const now = new Date().getHours();
         const labels=[], data=[], rain=[];
+        let sumTemp = 0;
         for(let i=0; i<24; i++) {
             labels.push(`${(now+i)%24}:00`);
             let t = hourly.temperature_2m[now+i];
             if(!STATE.metric) t=t*1.8+32;
             data.push(t);
+            sumTemp += t;
             rain.push(hourly.precipitation_probability[now+i]);
         }
+        
+        // Determine Color Scheme based on avg temp
+        const avg = sumTemp / 24;
+        const isHot = STATE.metric ? avg > 25 : avg > 77;
+        const color = isHot ? '#f97316' : '#22d3ee'; // Orange vs Cyan
+        const bgStop = isHot ? 'rgba(249, 115, 22, 0.3)' : 'rgba(34, 211, 238, 0.3)';
+        const bgStopEnd = isHot ? 'rgba(249, 115, 22, 0)' : 'rgba(34, 211, 238, 0)';
+
         STATE.chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels,
                 datasets: [
-                    { label:'Temp', data, borderColor:'#22d3ee', backgroundColor:(c)=>{const g=c.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,'rgba(34,211,238,0.3)');g.addColorStop(1,'rgba(34,211,238,0)');return g;}, borderWidth:2, tension:0.4, fill:true, yAxisID:'y'},
-                    { label:'Rain %', data:rain, borderColor:'#3b82f6', borderDash:[5,5], borderWidth:1, pointRadius:0, fill:false, yAxisID:'y1' }
+                    { 
+                        label:'Temp', 
+                        data, 
+                        borderColor: color, 
+                        backgroundColor:(c)=>{
+                            const g=c.chart.ctx.createLinearGradient(0,0,0,200);
+                            g.addColorStop(0, bgStop);
+                            g.addColorStop(1, bgStopEnd);
+                            return g;
+                        }, 
+                        borderWidth:2, 
+                        tension:0.4, 
+                        fill:true, 
+                        yAxisID:'y'
+                    },
+                    { 
+                        label:'Rain %', 
+                        data:rain, 
+                        borderColor:'#3b82f6', 
+                        borderDash:[5,5], 
+                        borderWidth:1, 
+                        pointRadius:0, 
+                        fill:false, 
+                        yAxisID:'y1' 
+                    }
                 ]
             },
             options: { 
@@ -836,10 +893,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let debounce;
+    // Search Logic with Enter Key support and Clear Button
     ui.input.addEventListener('input', e => {
+        const q = e.target.value;
+        if(q.length > 0) ui.clearBtn.classList.remove('hidden'); 
+        else ui.clearBtn.classList.add('hidden');
+
         clearTimeout(debounce);
         debounce = setTimeout(async () => {
-            const q = e.target.value;
             if(q.length<3) { ui.suggestions.classList.add('hidden'); return; }
             const r = await fetch(`${CONFIG.geo}?name=${q}&count=5`).then(res=>res.json());
             ui.suggestions.innerHTML = '';
@@ -848,13 +909,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     const d = document.createElement('div');
                     d.className = "px-5 py-3 hover:bg-cyan-500/20 cursor-pointer text-sm text-white border-b border-white/5 flex justify-between";
                     d.innerHTML = `<span>${p.name}</span><span class="text-xs text-gray-500 font-bold uppercase">${p.country}</span>`;
-                    d.onclick = () => { fetchWeather(p.latitude, p.longitude, p.name); ui.input.value=''; ui.suggestions.classList.add('hidden'); };
+                    d.onclick = () => { fetchWeather(p.latitude, p.longitude, p.name); ui.input.value=''; ui.clearBtn.classList.add('hidden'); ui.suggestions.classList.add('hidden'); };
                     ui.suggestions.appendChild(d);
                 });
                 ui.suggestions.classList.remove('hidden');
             }
         }, 300);
     });
+
+    ui.input.addEventListener('keydown', e => {
+        if(e.key === 'Enter' && ui.suggestions.children.length > 0) {
+            ui.suggestions.children[0].click();
+            ui.input.blur();
+        }
+    });
+
+    ui.clearBtn.onclick = () => {
+        ui.input.value = '';
+        ui.clearBtn.classList.add('hidden');
+        ui.suggestions.classList.add('hidden');
+        ui.input.focus();
+    };
 
     const setUnit = (m) => { STATE.metric=m; ui.unitPill.style.transform=m?'translateX(0)':'translateX(100%)'; ui.btnC.style.color=m?'#fff':'#6b7280'; ui.btnF.style.color=!m?'#fff':'#6b7280'; renderUI(); };
     ui.btnC.onclick = () => setUnit(true); ui.btnF.onclick = () => setUnit(false);
@@ -881,7 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Init
     fetchWeather(51.5074, -0.1278, "London");
-    document.addEventListener('click', e => { if(!el('search-input').contains(e.target)) ui.suggestions.classList.add('hidden'); });
+    document.addEventListener('click', e => { if(!el('search-input').contains(e.target) && !ui.clearBtn.contains(e.target)) ui.suggestions.classList.add('hidden'); });
 });
 </script>
 </body>
