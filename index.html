@@ -148,6 +148,22 @@
             border-radius: 16px; overflow: hidden; z-index: 100; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
         }
 
+        /* Explore Modal */
+        #explore-modal {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        #explore-modal.open { opacity: 1; pointer-events: auto; }
+        
+        .explore-card {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; padding: 12px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .explore-card:hover { background: rgba(255,255,255,0.1); transform: scale(1.02); }
+
         /* Typography */
         .fluid-temp { font-size: clamp(4rem, 10vw, 7.5rem); }
         .fluid-h1 { font-size: clamp(2rem, 5vw, 4rem); }
@@ -202,6 +218,30 @@
     <canvas id="precip-canvas" width="1468" height="541"></canvas>
     <div id="lightning"></div>
 
+    <!-- EXPLORE MODAL -->
+    <div id="explore-modal">
+        <div class="w-full max-w-5xl h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold font-display text-white uppercase tracking-widest" id="explore-title">Global Sentry</h2>
+                    <p class="text-sm text-cyan-400 font-mono" id="explore-subtitle">Live Atmospheric Scan</p>
+                </div>
+                <button id="close-explore" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            
+            <div id="explore-loading" class="flex-1 flex flex-col items-center justify-center">
+                <div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div>
+                <p class="text-sm text-gray-400 font-mono animate-pulse" id="explore-loading-text">Scanning Sectors...</p>
+            </div>
+
+            <div id="explore-content" class="hidden flex-1 overflow-y-auto custom-scroll grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
+                <!-- Injected Sections -->
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP -->
     <div class="relative w-full max-w-[1600px] mx-auto min-h-screen flex flex-col p-4 md:p-6 lg:p-8">
         <!-- HEADER -->
@@ -234,7 +274,7 @@
                     <div class="hidden" id="suggestions"></div>
                 </div>
                 
-                <!-- Unit Toggle & GPS -->
+                <!-- Unit Toggle & GPS & Explore -->
                 <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
                     <button class="h-12 px-5 rounded-full bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 text-gray-300 transition-all flex items-center gap-2 shadow-lg" id="gps-btn" aria-label="Locate Me">
                         <span class="material-symbols-rounded">my_location</span>
@@ -242,6 +282,16 @@
                     </button>
                     <button class="h-12 w-12 rounded-full bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 text-gray-300 transition-all flex items-center justify-center shadow-lg" id="refresh-btn" aria-label="Refresh Data">
                         <span class="material-symbols-rounded">refresh</span>
+                    </button>
+                    
+                    <!-- LOCAL SENTRY BUTTON -->
+                    <button class="h-12 w-12 rounded-full bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 transition-all flex items-center justify-center shadow-lg" id="local-btn" aria-label="Local Sentry">
+                        <span class="material-symbols-rounded">radar</span>
+                    </button>
+
+                    <!-- GLOBAL EXPLORE BUTTON -->
+                    <button class="h-12 w-12 rounded-full bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/30 hover:border-purple-400/50 text-purple-300 transition-all flex items-center justify-center shadow-lg" id="explore-btn" aria-label="Global Explore">
+                        <span class="material-symbols-rounded">public</span>
                     </button>
 
                     <div class="h-12 p-1 bg-black/40 border border-white/10 rounded-full flex relative shadow-inner shrink-0">
@@ -513,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         favorites: JSON.parse(localStorage.getItem('aether_favs_v12')) || ['London', 'Tokyo', 'New York']
     };
     
-    // Fallback Cities for Random Selection
+    // Fallback Cities for Random Selection (Startup)
     const RANDOM_CITIES = [
         {name: "London", lat: 51.5074, lon: -0.1278},
         {name: "Tokyo", lat: 35.6762, lon: 139.6503},
@@ -525,13 +575,45 @@ document.addEventListener('DOMContentLoaded', () => {
         {name: "Reykjavik", lat: 64.1466, lon: -21.9426}
     ];
 
+    // Diverse List for "Global Explore" - Expanded to ensure coverage
+    const EXPLORE_CITIES = [
+        // Major Hubs
+        {name: "London, UK", lat: 51.5074, lon: -0.1278}, {name: "Tokyo, JP", lat: 35.6762, lon: 139.6503},
+        {name: "New York, US", lat: 40.7128, lon: -74.0060}, {name: "Singapore", lat: 1.3521, lon: 103.8198},
+        // Cold / Snow Likely
+        {name: "Reykjavik, IS", lat: 64.1466, lon: -21.9426}, {name: "Yakutsk, RU", lat: 62.0355, lon: 129.6755},
+        {name: "Nuuk, GL", lat: 64.1814, lon: -51.6941}, {name: "Antarctica (McMurdo)", lat: -77.846, lon: 166.668},
+        {name: "Harbin, CN", lat: 45.8038, lon: 126.5349}, {name: "Anchorage, US", lat: 61.2181, lon: -149.9003},
+        {name: "Sapporo, JP", lat: 43.0618, lon: 141.3545}, {name: "Murmansk, RU", lat: 68.9585, lon: 33.0827},
+        // Hot / Clear Likely
+        {name: "Dubai, AE", lat: 25.2048, lon: 55.2708}, {name: "Cairo, EG", lat: 30.0444, lon: 31.2357},
+        {name: "Riyadh, SA", lat: 24.7136, lon: 46.6753}, {name: "Alice Springs, AU", lat: -23.6980, lon: 133.8807},
+        {name: "Las Vegas, US", lat: 36.1699, lon: -115.1398}, {name: "Phoenix, US", lat: 33.4484, lon: -112.0740},
+        // Rain / Storm / Tropical
+        {name: "Manaus, BR", lat: -3.1190, lon: -60.0217}, {name: "Jakarta, ID", lat: -6.2088, lon: 106.8456},
+        {name: "Kuala Lumpur, MY", lat: 3.1390, lon: 101.6869}, {name: "Mumbai, IN", lat: 19.0760, lon: 72.8777},
+        {name: "Hilo, US", lat: 19.7297, lon: -155.0900}, {name: "Bergen, NO", lat: 60.3913, lon: 5.3221},
+        // Windy / Cloudy / Temperate
+        {name: "Wellington, NZ", lat: -41.2866, lon: 174.7756}, {name: "Tórshavn, FO", lat: 62.0097, lon: -6.7720},
+        {name: "Seattle, US", lat: 47.6062, lon: -122.3321}, {name: "London, UK", lat: 51.5074, lon: -0.1278},
+        {name: "Lima, PE", lat: -12.0464, lon: -77.0428}, {name: "St. John's, CA", lat: 47.5615, lon: -52.7126},
+        // Southern Hemisphere
+        {name: "Cape Town, ZA", lat: -33.9249, lon: 18.4241}, {name: "Ushuaia, AR", lat: -54.8019, lon: -68.3030},
+        {name: "Sydney, AU", lat: -33.8688, lon: 151.2093}, {name: "Rio de Janeiro, BR", lat: -22.9068, lon: -43.1729}
+    ];
+
     // --- UI ELEMENTS ---
     const el = id => document.getElementById(id);
     const ui = {
         // Loading & Search
         dashboard: el('dashboard'), input: el('search-input'), suggestions: el('suggestions'), clearBtn: el('clear-btn'),
-        gpsBtn: el('gps-btn'), refreshBtn: el('refresh-btn'), btnC: el('btn-c'), btnF: el('btn-f'), unitPill: el('unit-pill'),
+        gpsBtn: el('gps-btn'), refreshBtn: el('refresh-btn'), exploreBtn: el('explore-btn'), localBtn: el('local-btn'), 
+        btnC: el('btn-c'), btnF: el('btn-f'), unitPill: el('unit-pill'),
         favicon: el('dynamic-favicon'), statusDot: el('status-dot'), statusText: el('status-text'),
+        // Explore Modal
+        exploreModal: el('explore-modal'), closeExplore: el('close-explore'), 
+        exploreContent: el('explore-content'), exploreLoading: el('explore-loading'),
+        exploreTitle: el('explore-title'), exploreSubtitle: el('explore-subtitle'),
         // Main Data
         city: el('city-name'), desc: el('weather-desc'), temp: el('temp-val'), feels: el('feels-val'),
         tempMax: el('temp-max'), tempMin: el('temp-min'), time: el('local-time'), date: el('local-date'), bgIcon: el('bg-icon'),
@@ -558,6 +640,132 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize UI based on persistent state
     if(!STATE.metric) { ui.unitPill.style.transform='translateX(100%)'; ui.btnC.style.color='#6b7280'; ui.btnF.style.color='#fff'; }
+
+    // --- MODAL LOGIC (GLOBAL & LOCAL) ---
+    ui.exploreBtn.onclick = () => {
+        ui.exploreTitle.textContent = "Global Sentry";
+        ui.exploreSubtitle.textContent = "Live Planetary Scan";
+        ui.exploreModal.classList.add('open');
+        scanGlobalWeather();
+    };
+    
+    ui.localBtn.onclick = () => {
+        if(navigator.geolocation) {
+            ui.exploreTitle.textContent = "Local Sector Scan";
+            ui.exploreSubtitle.textContent = "Scanning Immediate Atmosphere (20km Radius)";
+            ui.exploreModal.classList.add('open');
+            
+            navigator.geolocation.getCurrentPosition(
+                (p) => scanLocalWeather(p.coords.latitude, p.coords.longitude),
+                (e) => { alert("GPS Denied. Cannot scan local sectors."); ui.exploreModal.classList.remove('open'); }
+            );
+        } else {
+            alert("GPS not supported.");
+        }
+    };
+
+    ui.closeExplore.onclick = () => ui.exploreModal.classList.remove('open');
+
+    // GLOBAL SCAN
+    async function scanGlobalWeather() {
+        ui.exploreLoading.classList.remove('hidden');
+        ui.exploreLoading.innerHTML = '<div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div><p class="text-sm text-gray-400 font-mono animate-pulse">Scanning Global Sectors...</p>';
+        ui.exploreContent.classList.add('hidden');
+        ui.exploreContent.innerHTML = '';
+
+        try {
+            const promises = EXPLORE_CITIES.map(city => 
+                fetch(`${CONFIG.weather}?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code,is_day&timezone=auto`)
+                .then(r => r.json())
+                .then(data => ({ ...city, ...data.current }))
+            );
+            const results = await Promise.all(promises);
+            renderExploreGrid(results);
+        } catch(e) { console.error(e); }
+    }
+
+    // LOCAL SCAN
+    async function scanLocalWeather(lat, lon) {
+        ui.exploreLoading.classList.remove('hidden');
+        ui.exploreLoading.innerHTML = '<div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div><p class="text-sm text-gray-400 font-mono animate-pulse">Scanning Local Sectors...</p>';
+        ui.exploreContent.classList.add('hidden');
+        ui.exploreContent.innerHTML = '';
+
+        // Generate 8 points around user (approx 15km radius)
+        // 0.15 deg lat ~= 16km
+        const offset = 0.15;
+        const sectors = [
+            { name: "Sector North", lat: lat + offset, lon: lon },
+            { name: "Sector North-East", lat: lat + offset, lon: lon + offset },
+            { name: "Sector East", lat: lat, lon: lon + offset },
+            { name: "Sector South-East", lat: lat - offset, lon: lon + offset },
+            { name: "Sector South", lat: lat - offset, lon: lon },
+            { name: "Sector South-West", lat: lat - offset, lon: lon - offset },
+            { name: "Sector West", lat: lat, lon: lon - offset },
+            { name: "Sector North-West", lat: lat + offset, lon: lon - offset },
+        ];
+
+        try {
+            const promises = sectors.map(sec => 
+                fetch(`${CONFIG.weather}?latitude=${sec.lat}&longitude=${sec.lon}&current=temperature_2m,weather_code,is_day&timezone=auto`)
+                .then(r => r.json())
+                .then(data => ({ ...sec, ...data.current }))
+            );
+            const results = await Promise.all(promises);
+            renderExploreGrid(results);
+        } catch(e) { console.error(e); }
+    }
+
+    function renderExploreGrid(results) {
+        const buckets = { 'Clear': [], 'Cloudy': [], 'Rain': [], 'Snow': [], 'Storm': [] };
+        
+        results.forEach(r => {
+            const c = r.weather_code;
+            let cat = 'Cloudy';
+            if(c === 0 || c === 1) cat = 'Clear';
+            else if(c === 2 || c === 3 || c === 45 || c === 48) cat = 'Cloudy';
+            else if(c >= 51 && c <= 67 || c >= 80 && c <= 82) cat = 'Rain';
+            else if(c >= 71 && c <= 77 || c === 85 || c === 86) cat = 'Snow';
+            else if(c >= 95) cat = 'Storm';
+            buckets[cat].push(r);
+        });
+
+        const icons = { 'Clear': 'sunny', 'Cloudy': 'cloud', 'Rain': 'rainy', 'Snow': 'weather_snowy', 'Storm': 'thunderstorm' };
+        const colors = { 'Clear': 'text-yellow-400', 'Cloudy': 'text-gray-400', 'Rain': 'text-blue-400', 'Snow': 'text-cyan-200', 'Storm': 'text-purple-400' };
+
+        Object.keys(buckets).forEach(cat => {
+            if(buckets[cat].length > 0) {
+                const section = document.createElement('div');
+                section.innerHTML = `
+                    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
+                        <span class="material-symbols-rounded ${colors[cat]}">${icons[cat]}</span>
+                        <h3 class="text-sm font-bold text-white uppercase tracking-widest">${cat} Sectors</h3>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2">
+                        ${buckets[cat].map(place => {
+                            let temp = place.temperature_2m;
+                            if(!STATE.metric) temp = temp * 1.8 + 32;
+                            return `
+                            <div class="explore-card flex justify-between items-center" onclick="loadFromExplore(${place.lat}, ${place.lon}, '${place.name}')">
+                                <span class="text-sm font-medium text-gray-200">${place.name}</span>
+                                <span class="text-xs font-bold font-mono text-cyan-400">${Math.round(temp)}°</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                `;
+                ui.exploreContent.appendChild(section);
+            }
+        });
+
+        ui.exploreLoading.classList.add('hidden');
+        ui.exploreContent.classList.remove('hidden');
+    }
+
+    // Exposed function for onclick in HTML string
+    window.loadFromExplore = (lat, lon, name) => {
+        ui.exploreModal.classList.remove('open');
+        fetchWeather(lat, lon, name);
+    };
 
     // --- STATUS INDICATOR ---
     function setStatus(mode) {
