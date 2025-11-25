@@ -1,178 +1,303 @@
-# 🌤️ **Weather App**
+# 🌐 **Aether Weather – Version 3.0**
+
+### *Next-Generation Atmospheric Intelligence Platform*
 
 Live Demo: **[https://monish21072004.github.io/Weather-App/](https://monish21072004.github.io/Weather-App/)**
 
-Weather App is a **modern, glassmorphism-based weather application** that shows real-time weather, forecasts, air quality, radar maps, voice search, and beautiful dynamic animations. It is fully responsive and designed for a smooth user experience.
-
-The app uses **Open-Meteo APIs**, **Chart.js**, **TailwindCSS**, and a custom **Canvas animation engine** that adapts to the weather automatically.
-Source UI and logic is based on the deployed code in your project .
+Aether Weather V3 is a **complete redesign and overhaul** of the previous Weather App.
+Now powered by a cinematic **atmospheric rendering engine**, real-time environmental physics, global scanning, AI insights, lightning simulation, celestial calculations, and a fully rebuilt UI, Aether V3 provides one of the most immersive weather visualizations on the web.
 
 ---
 
-## 🚀 **Features**
+## ✨ **Aether V3 – Major Release Highlights**
 
-### 🌦️ **Accurate Real-Time Weather**
+> The biggest update since the project launched — rebuilt from the ground up with a new atmospheric engine, new UI, new physics, and global scanning capabilities.
+
+* ⚡ Storm Engine 2.0 with real lightning
+* 🌍 Global Sentry – live world weather scanning
+* 📡 Local Sector Scan – micro-climate tracking
+* 🌌 Starfield renderer with nighttime mode
+* 🌈 Dynamic aurora & atmospheric layers
+* 🌙 Moon Phase engine with realistic shading
+* 🌅 Solar Arc tracking system
+* ☁️ Multi-layer drifting clouds
+* 🌫️ Fog & mist simulation
+* 🎨 Glass UI V3 + neon accents
+* 📊 Upgraded forecast chart
+* 🧠 Improved tactical insight system
+
+---
+
+# 🚀 **Features**
+
+## 🌦️ **Accurate Real-Time Weather**
 
 * Temperature & feels-like
-* Weather code interpretation
-* Humidity, pressure, visibility
-* Rain/snow detection
-* Auto day/night mode
+* Humidity, dew point, visibility
+* Rain, snow, storms
+* Wind speed, gusts, and direction
+* Day/Night auto mode
+* UV index + Air Quality
+* Severe weather alerts
 
-### 🎨 **Dynamic UI & Weather Animations**
+---
 
-* Background changes dynamically for:
+## 🎨 **Aether Visual Engine V3**
 
-  * Sunny
+A fully rewritten atmospheric engine that generates real-time visuals:
+
+### Sky Rendering
+
+* Smooth adaptive gradients
+* Aurora simulation
+* Fog & mist layers
+* Night sky starfield
+* Weather-reactive colors
+
+### Particle Physics
+
+* Wind-drift rain streaks
+* Snow drift with natural wobble
+* Intensity scales with actual precipitation data
+
+### Cloud Layers
+
+* Front and back drifting clouds
+* Overcast density control
+* Storm cloud rendering
+
+---
+
+## ⚡ **Storm Engine 2.0**
+
+True dynamic storms:
+
+* Procedural **lightning bolts**
+* **Sheet lightning** flash effect
+* Multi-segment fractal paths
+* Thunderstorm ambience
+* Storm-intense precipitation
+* API-driven severity scaling
+
+---
+
+## 🌙 **Celestial System**
+
+* Dynamic **Sun/Moon rendering**
+* Phase-accurate **Moon shading**
+* Lunar/solar glow processing
+* Weather-driven celestial visibility
+* SVG-rendered accuracy
+
+---
+
+## 🌅 **Solar Arc Tracker**
+
+Beautiful animated arc showing:
+
+* Sun path
+* Sunrise & sunset
+* Day progress indicator
+* Auto-switch to moon at night
+
+---
+
+## 🧠 **Tactical Insight Assistant V2**
+
+Smart advice for users:
+
+* Condition summary
+* Personal comfort index
+* Health tab (UV, AQI, pollutants)
+* Activity tab (outdoor, running, driving)
+* Gear recommendations
+* Atmospheric tags
+
+---
+
+## 🌍 **Global Sentry**
+
+A world-scale weather scanner:
+
+* 50+ global stations
+* Categorizes zones into:
+
+  * Clear
   * Cloudy
   * Rain
   * Snow
-  * Thunderstorms
-  * Fog
-  * Day/Night
-* Canvas-based particle animations:
+  * Storm
+* Click any zone to load instantly
 
-  * Rain streaks
-  * Snow flakes
-  * Starry night sky
-  * Drifting clouds
+---
 
-### 🔍 **Smart Search + Voice Input**
+## 📡 **Local Sector Scan**
 
-* Auto-suggestions for cities
-* Clickable dropdown options
-* Microphone search (SpeechRecognition API)
+Uses GPS to scan weather within a **20km radius**:
 
-### ⭐ **Favorites System**
+* 8 radial sectors around your position
+* Shows micro-climate variation
+* Great for hyperlocal storm tracking
 
-* Save & load favorite locations
-* Stored in browser `localStorage`
-* Quick-access city chips
+---
 
-### 📊 **24-Hour Temperature Graph**
+## 📊 **24-Hour Forecast Chart**
 
-* Smooth animated line chart
-* Auto color adaptation for dark/light themes
-* Responsive design
+* Smooth curved line chart
+* Auto-updates on unit switch
+* Responsive for all layouts
 
-### 📅 **7-Day Forecast**
+---
 
-* Icons + description
+## 📅 **7-Day Projection**
+
+* Minimalist glass list view
+* Icons, descriptions
 * Max/Min temperature
-* Day-wise summary
-
-### 🗺️ **Live Weather Radar**
-
-* Embedded Windy radar
-* Shows rain overlay
-* Auto-centered to searched city
-
-### 🌫️ **Air Quality**
-
-* Live AQI from Open-Meteo
-* Color-coded category badge
-
-### 🔅 **UV Index Visualizer**
-
-* Gradient bar showing UV intensity
-
-### 🌅 **Sunrise & Sunset**
+* Daily weather trend
 
 ---
 
-## 🛠️ **Tech Stack**
+## ⭐ **Favorites System**
 
-| Technology                 | Purpose                           |
-| -------------------------- | --------------------------------- |
-| **HTML, CSS, JS**          | Primary UI & logic                |
-| **Tailwind CSS**           | Glassmorphism + responsive layout |
-| **Chart.js**               | Trend graph                       |
-| **Open-Meteo Weather API** | Current/hourly/daily forecasts    |
-| **Open-Meteo AQI API**     | Air quality                       |
-| **Windy.com Embed**        | Live radar                        |
-| **SpeechRecognition API**  | Voice input                       |
-| **Canvas API**             | Weather particle animations       |
+* Save unlimited cities
+* Neon-style favorite chips
+* Instant city switching
+* Persistent storage
 
 ---
 
-## 📂 **Project Structure**
+## 🗺️ **Live Radar**
+
+* Windy.com rain radar
+* Auto-centers based on search
+* Smooth opacity transitions
+
+---
+
+# 🛠️ **Tech Stack**
+
+| Technology           | Purpose                     |
+| -------------------- | --------------------------- |
+| **HTML, JavaScript** | Core logic + rendering      |
+| **TailwindCSS**      | UI, Layout, Glassmorphism   |
+| **Chart.js**         | 24-hour temperature graph   |
+| **Open-Meteo APIs**  | Weather, AQI, Geocoding     |
+| **Canvas API**       | Particles, stars, lightning |
+| **SVG Rendering**    | Sun, moon, solar arc        |
+| **LocalStorage**     | Caching + favorites         |
+| **Material Symbols** | Vector icons                |
+
+---
+
+# 📂 **Project Structure**
 
 ```
 Weather-App/
-│── index.html        # Main application
+│── index.html        # Main Aether V3 Engine (UI + Logic)
 │── README.md         # Documentation
-│── assets/           # Optional: images/icons
 ```
 
 ---
 
-## ⚙️ **How It Works**
+# ⚙️ **How It Works**
 
-### 1️⃣ Geocoding → Weather Fetch
+### 1️⃣ Weather → Rendering Pipeline
 
-City name → latitude/longitude → weather, AQI, forecast, UV, and more.
+Weather codes dynamically control:
 
-### 2️⃣ Weather Rendering
+* Sky
+* Clouds
+* Stars
+* Fog
+* Precipitation
+* Lightning
+* Favicon
+* UI gradients
 
-* Converts WMO codes
-* Computes dew point
-* Updates UI + icons
-* Triggers the matching animation
+### 2️⃣ Precipitation Simulation
 
-### 3️⃣ Dynamic Mode Adjustments
+Rain & snow physics scale based on:
 
-* Day vs night themes
-* Weather-based gradient
-* Starts rain/snow/star animations
+* Real precipitation value
+* Wind speed
+* Storm severity
 
-### 4️⃣ Temperature Trend Graph
+### 3️⃣ Global Scanning
 
-* Next 24 hours plotted via Chart.js
-* Auto-updates when units switch (°C/°F)
+Parallel API requests → grouped → rendered into cards.
 
-### 5️⃣ Favorites
+### 4️⃣ Celestial Position Calculation
 
-Saved in localStorage, displayed as clickable chips.
+Moon phase generated using synodic cycle formulas.
 
 ---
 
-## 💻 **Setup & Run Locally**
-
-1. Clone the repo:
+# 💻 **Run Locally**
 
 ```bash
 git clone https://github.com/monish21072004/Weather-App.git
-```
-
-2. Open the project folder:
-
-```bash
 cd Weather-App
+open index.html
 ```
 
-3. Run locally:
-   Just open `index.html` in any browser — no server needed.
+No server required.
 
 ---
 
-## 🚀 **Deploy on GitHub Pages**
+# 🚀 **Deploy via GitHub Pages**
 
 1. Go to **Settings → Pages**
-2. Select **main branch** and **root**
-3. Save
-4. Your Weather App becomes live instantly
+2. Select **main** branch
+3. Select **root**
+4. Save
+5. Your app is live 🚀
 
 ---
 
-## 🤝 Contributing
+# 📘 **Changelog**
 
-Pull requests and features are welcome!
-Feel free to open issues for bugs, UI/UX improvements, or new ideas.
+## **[3.0.0] – Major Aether Update**
+
+### Added
+
+* Aether Visual Engine V3
+* Storm Engine 2.0 (bolts + sheet lightning)
+* Global Sentry Scanner
+* Local Sector Scan
+* Moon Phase Engine
+* Solar Arc Tracker
+* Cloud Layers V3
+* Fog & Mist Simulation
+* Aurora Layer
+* New 7-day projection
+* New Insight Assistant
+* New metrics (gusts, pollutants, etc.)
+* Precipitation physics overhaul
+
+### Changed
+
+* Fully redesigned UI
+* Improved chart responsiveness
+* Faster API calls with parallel fetching
+* Better unit switching system
+
+### Removed
+
+* Old animations
+* Old UI components
+* Deprecated AQI logic
+* Legacy graph implementations
 
 ---
 
-## 📜 License
+# 🤝 **Contributing**
 
-This project is open-source under the **MIT License**.
+Ideas and contributions are welcome!
+Feel free to open issues or submit pull requests.
 
+---
 
+# 📜 **License**
+
+MIT License.
