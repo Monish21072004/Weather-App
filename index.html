@@ -214,8 +214,8 @@
                 <div>
                     <h1 class="text-xl font-bold font-display uppercase tracking-widest text-white">Aether <span class="text-cyan-400 text-sm align-top opacity-50">v3</span></h1>
                     <div class="flex items-center gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                        <span class="text-[10px] text-cyan-200 tracking-[0.2em] uppercase font-mono">Online</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" id="status-dot"></span>
+                        <span class="text-[10px] text-cyan-200 tracking-[0.2em] uppercase font-mono" id="status-text">Online</span>
                     </div>
                 </div>
             </div>
@@ -500,7 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
         aqi: 'https://air-quality-api.open-meteo.com/v1/air-quality'
     };
     
-    // Initialize State with persistent Metric preference
+    // Initialize State with persistent Metric preference & Cache Key
+    const CACHE_KEY = 'aether_last_weather';
     const STATE = {
         metric: localStorage.getItem('aether_units') !== 'false', // Default to true if null
         data: null,
@@ -530,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Loading & Search
         dashboard: el('dashboard'), input: el('search-input'), suggestions: el('suggestions'), clearBtn: el('clear-btn'),
         gpsBtn: el('gps-btn'), refreshBtn: el('refresh-btn'), btnC: el('btn-c'), btnF: el('btn-f'), unitPill: el('unit-pill'),
-        favicon: el('dynamic-favicon'),
+        favicon: el('dynamic-favicon'), statusDot: el('status-dot'), statusText: el('status-text'),
         // Main Data
         city: el('city-name'), desc: el('weather-desc'), temp: el('temp-val'), feels: el('feels-val'),
         tempMax: el('temp-max'), tempMin: el('temp-min'), time: el('local-time'), date: el('local-date'), bgIcon: el('bg-icon'),
@@ -557,6 +558,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize UI based on persistent state
     if(!STATE.metric) { ui.unitPill.style.transform='translateX(100%)'; ui.btnC.style.color='#6b7280'; ui.btnF.style.color='#fff'; }
+
+    // --- STATUS INDICATOR ---
+    function setStatus(mode) {
+        if(mode === 'sync') {
+            ui.statusDot.className = "w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse";
+            ui.statusText.textContent = "Synced";
+            ui.statusText.className = "text-[10px] text-cyan-200 tracking-[0.2em] uppercase font-mono";
+        } else {
+            ui.statusDot.className = "w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping";
+            ui.statusText.textContent = "Updating";
+            ui.statusText.className = "text-[10px] text-yellow-200 tracking-[0.2em] uppercase font-mono";
+        }
+    }
 
     // --- MOON PHASE ENGINE ---
     function getMoonPhase(date) {
@@ -747,19 +761,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         particles = [];
         if(type==='rain'||type==='storm') {
-            // More particles for storm, faster speed
-            const count = type==='storm' ? 800 : 400;
-            const speedBase = type==='storm' ? 25 : 15;
-            // Wind effect
-            const wind = type==='storm' ? 5 : 0;
+            // Dynamic Intensity based on REAL data
+            const precip = STATE.data?.current?.precipitation || 0;
+            const isHeavy = type === 'storm' || precip > 5;
             
+            // Calculate particles: 200 base + up to 1000 more based on precip amount
+            let count = 200 + Math.min(precip * 100, 1000);
+            let speedBase = 15 + Math.min(precip * 2, 20); // Faster rain for heavier precip
+            let wind = (STATE.data?.current?.wind_speed_10m || 0) / 5; // Wind affects rain angle
+            
+            // Force storm values if code is 95/96
+            if(type==='storm') { count = Math.max(count, 800); speedBase = 25; }
+
             for(let i=0;i<count;i++) {
                 particles.push({
                     x:Math.random()*w,
                     y:Math.random()*h,
                     vy:Math.random()*15+speedBase,
-                    vx: wind, // Horizontal movement
-                    len:20,
+                    vx: wind, 
+                    len: 15 + Math.min(precip, 15), // Longer streaks for heavy rain
                     type:'rain'
                 });
             }
@@ -805,23 +825,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LOGIC ---
     function toggleSkeleton(loading) {
         document.body.classList.toggle('loaded', !loading);
+        setStatus(loading ? 'update' : 'sync');
     }
 
     async function fetchWeather(lat, lon, name) {
         toggleSkeleton(true);
         try {
             const [w, a] = await Promise.all([
-                fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
+                fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
                 fetch(`${CONFIG.aqi}?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,nitrogen_dioxide,ozone`).then(r=>r.json())
             ]);
-            STATE.data = { ...w, aqi: a.current, cityName: name, lat, lon }; // Saved lat/lon for refresh
+            STATE.data = { ...w, aqi: a.current, cityName: name, lat, lon, timestamp: Date.now() }; 
+            
+            // SAVE TO CACHE
+            localStorage.setItem(CACHE_KEY, JSON.stringify(STATE.data));
+            
             // Simulate minimal network delay for skeleton effect demonstration
             setTimeout(() => { renderUI(); toggleSkeleton(false); }, 600);
-        } catch(e) { console.error(e); ui.city.textContent = "Error"; }
+        } catch(e) { console.error(e); ui.city.textContent = "Error"; setStatus('update'); }
     }
 
     function renderUI() {
         const d = STATE.data;
+        if (!d) return;
+
         const cur = d.current;
         const isDay = cur.is_day === 1;
         
@@ -1154,16 +1181,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- STARTUP LOGIC ---
     function initApp() {
+        // CHECK CACHE FIRST
+        const cached = localStorage.getItem(CACHE_KEY);
+        if(cached) {
+            try {
+                STATE.data = JSON.parse(cached);
+                renderUI();
+                setStatus('sync');
+            } catch(e) { console.log("Cache invalid"); }
+        }
+
+        // THEN FETCH FRESH
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (p) => fetchWeather(p.coords.latitude, p.coords.longitude, "My Location"),
                 (e) => {
-                    console.log("GPS Denied, using random.");
-                    loadRandomCity();
+                    console.log("GPS Denied, using fallback.");
+                    if(!STATE.data) loadRandomCity(); // Only load random if no cache
                 }
             );
         } else {
-            loadRandomCity();
+            if(!STATE.data) loadRandomCity();
         }
     }
 
