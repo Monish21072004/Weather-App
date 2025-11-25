@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
     <title>Aether Station V3</title>
+    <link rel="icon" type="image/png" href="https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/sunny/default/24px.svg" id="dynamic-favicon">
     
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -98,10 +99,13 @@
         #precip-canvas { position: fixed; inset: 0; z-index: -15; pointer-events: none; }
         
         #lightning {
-            position: fixed; inset: 0; background: #fff; z-index: -5; opacity: 0; pointer-events: none; mix-blend-mode: overlay;
+            position: fixed; inset: 0; z-index: -5; pointer-events: none; mix-blend-mode: screen;
         }
-        .flash-anim { animation: flash 0.3s ease-out; }
-        @keyframes flash { 0%, 100% { opacity: 0; } 30% { opacity: 0.8; } }
+        .flash-anim { 
+            position: absolute; inset: 0;
+            animation: flash 0.2s ease-out forwards; 
+        }
+        @keyframes flash { 0% { opacity: 0; } 50% { opacity: 0.6; } 100% { opacity: 0; } }
 
         /* --- UI COMPONENTS --- */
         .glass {
@@ -217,7 +221,7 @@
             </div>
 
             <!-- Controls -->
-            <div class="flex flex-col sm:flex-row w-full lg:w-auto gap-3 items-center">
+            <div class="flex flex-col sm:flex-row w-full lg:w-auto gap-3 items-center relative">
                 <!-- Search -->
                 <div class="search-box w-full sm:w-80">
                     <div class="relative flex items-center bg-white/5 border border-white/10 rounded-full px-5 py-3 backdrop-blur-md focus-within:bg-black/60 focus-within:border-cyan-400/50 transition-all shadow-lg">
@@ -229,12 +233,17 @@
                     </div>
                     <div class="hidden" id="suggestions"></div>
                 </div>
+                
                 <!-- Unit Toggle & GPS -->
                 <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
-                    <button class="h-12 px-5 rounded-full bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 text-gray-300 transition-all flex items-center gap-2 shadow-lg" id="gps-btn">
+                    <button class="h-12 px-5 rounded-full bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 text-gray-300 transition-all flex items-center gap-2 shadow-lg" id="gps-btn" aria-label="Locate Me">
                         <span class="material-symbols-rounded">my_location</span>
                         <span class="text-xs font-bold uppercase hidden sm:inline">Locate</span>
                     </button>
+                    <button class="h-12 w-12 rounded-full bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 text-gray-300 transition-all flex items-center justify-center shadow-lg" id="refresh-btn" aria-label="Refresh Data">
+                        <span class="material-symbols-rounded">refresh</span>
+                    </button>
+
                     <div class="h-12 p-1 bg-black/40 border border-white/10 rounded-full flex relative shadow-inner shrink-0">
                         <div class="absolute left-1 top-1 bottom-1 w-[3rem] bg-gray-700 rounded-full transition-transform duration-300 z-0" id="unit-pill"></div>
                         <button class="relative z-10 w-[3rem] h-full rounded-full text-xs font-bold text-white transition-colors" id="btn-c">°C</button>
@@ -260,7 +269,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 transition-opacity duration-1000" id="dashboard">
             
             <!-- LEFT COLUMN (Main Info) -->
-            <div class="lg:col-span-8 flex flex-col gap-6">
+            <div class="lg:col-span-8 flex flex-col gap-6 min-w-0">
                 <!-- 1. HERO CARD -->
                 <div class="glass min-h-[450px] relative overflow-hidden group p-8 flex flex-col justify-between">
                     <!-- Background Icon -->
@@ -407,13 +416,15 @@
                 </div>
 
                 <!-- 3. CHART -->
-                <div class="glass p-6">
+                <!-- FIX: Added min-w-0 to parent and container to ensure Chart.js resizes down properly -->
+                <div class="glass p-6 w-full min-w-0">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="material-symbols-rounded text-cyan-400 text-sm">show_chart</span>
                         <h3 class="text-xs font-bold text-white uppercase tracking-widest">24-Hour Forecast</h3>
                     </div>
-                    <div class="h-64 w-full relative">
-                        <canvas id="chart-canvas"></canvas>
+                    <!-- Responsive height: shorter on mobile (h-48), standard on desktop (h-64) -->
+                    <div class="h-48 md:h-64 w-full relative">
+                        <canvas id="chart-canvas" style="width: 100%; height: 100%;"></canvas>
                     </div>
                 </div>
             </div>
@@ -488,21 +499,38 @@ document.addEventListener('DOMContentLoaded', () => {
         geo: 'https://geocoding-api.open-meteo.com/v1/search',
         aqi: 'https://air-quality-api.open-meteo.com/v1/air-quality'
     };
+    
+    // Initialize State with persistent Metric preference
     const STATE = {
-        metric: true,
+        metric: localStorage.getItem('aether_units') !== 'false', // Default to true if null
         data: null,
         chart: null,
         timer: null,
+        lightningTimer: null,
         animationId: null,
+        lightningBolts: [],
         favorites: JSON.parse(localStorage.getItem('aether_favs_v12')) || ['London', 'Tokyo', 'New York']
     };
+    
+    // Fallback Cities for Random Selection
+    const RANDOM_CITIES = [
+        {name: "London", lat: 51.5074, lon: -0.1278},
+        {name: "Tokyo", lat: 35.6762, lon: 139.6503},
+        {name: "New York", lat: 40.7128, lon: -74.0060},
+        {name: "Paris", lat: 48.8566, lon: 2.3522},
+        {name: "Singapore", lat: 1.3521, lon: 103.8198},
+        {name: "Sydney", lat: -33.8688, lon: 151.2093},
+        {name: "Dubai", lat: 25.2048, lon: 55.2708},
+        {name: "Reykjavik", lat: 64.1466, lon: -21.9426}
+    ];
 
     // --- UI ELEMENTS ---
     const el = id => document.getElementById(id);
     const ui = {
         // Loading & Search
         dashboard: el('dashboard'), input: el('search-input'), suggestions: el('suggestions'), clearBtn: el('clear-btn'),
-        gpsBtn: el('gps-btn'), btnC: el('btn-c'), btnF: el('btn-f'), unitPill: el('unit-pill'),
+        gpsBtn: el('gps-btn'), refreshBtn: el('refresh-btn'), btnC: el('btn-c'), btnF: el('btn-f'), unitPill: el('unit-pill'),
+        favicon: el('dynamic-favicon'),
         // Main Data
         city: el('city-name'), desc: el('weather-desc'), temp: el('temp-val'), feels: el('feels-val'),
         tempMax: el('temp-max'), tempMin: el('temp-min'), time: el('local-time'), date: el('local-date'), bgIcon: el('bg-icon'),
@@ -526,6 +554,9 @@ document.addEventListener('DOMContentLoaded', () => {
         cloudsBack: el('cloud-layer-back'), cloudsFront: el('cloud-layer-front'), mist: el('mist-layer'),
         precipCanvas: el('precip-canvas'), lightning: el('lightning')
     };
+
+    // Initialize UI based on persistent state
+    if(!STATE.metric) { ui.unitPill.style.transform='translateX(100%)'; ui.btnC.style.color='#6b7280'; ui.btnF.style.color='#fff'; }
 
     // --- MOON PHASE ENGINE ---
     function getMoonPhase(date) {
@@ -579,13 +610,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateMoonWidget(phase) {
         ui.moonUI.innerHTML = createMoonSVG(phase, 40, "#ffffff");
         let name = "New Moon";
-        if(phase>0.02 && phase<0.23) name="Waxing Crescent";
-        else if(phase>=0.23 && phase<0.27) name="First Quarter";
-        else if(phase>=0.27 && phase<0.48) name="Waxing Gibbous";
-        else if(phase>=0.48 && phase<0.52) name="Full Moon";
-        else if(phase>=0.52 && phase<0.73) name="Waning Gibbous";
-        else if(phase>=0.73 && phase<0.77) name="Last Quarter";
-        else if(phase>=0.77 && phase<0.98) name="Waning Crescent";
+        if(phase>0.035 && phase<0.215) name="Waxing Crescent";
+        else if(phase>=0.215 && phase<0.285) name="First Quarter";
+        else if(phase>=0.285 && phase<0.465) name="Waxing Gibbous";
+        else if(phase>=0.465 && phase<0.535) name="Full Moon";
+        else if(phase>=0.535 && phase<0.715) name="Waning Gibbous";
+        else if(phase>=0.715 && phase<0.785) name="Third Quarter"; 
+        else if(phase>=0.785 && phase<0.965) name="Waning Crescent";
         ui.moonText.textContent = name;
     }
 
@@ -594,20 +625,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvasP = ui.precipCanvas.getContext('2d');
     let w, h, stars=[], particles=[];
 
-    function resize() { w=window.innerWidth; h=window.innerHeight; ui.starCanvas.width=ui.precipCanvas.width=w; ui.starCanvas.height=ui.precipCanvas.height=h; initStars(); }
+    function resize() { 
+        w=window.innerWidth; h=window.innerHeight; 
+        ui.starCanvas.width=ui.precipCanvas.width=w; 
+        ui.starCanvas.height=ui.precipCanvas.height=h; 
+        if(stars.length === 0) initStars(); 
+    }
     window.addEventListener('resize', resize);
+
     function initStars() { stars=[]; for(let i=0; i<150; i++) stars.push({x:Math.random()*w, y:Math.random()*h, s:Math.random()*1.5, a:Math.random()}); }
+    
     function loop() {
         canvasS.clearRect(0,0,w,h); canvasP.clearRect(0,0,w,h);
+        
+        // Stars
         if(ui.starCanvas.style.opacity === '1') {
             canvasS.fillStyle="#fff";
             stars.forEach(s=>{ canvasS.globalAlpha=s.a; canvasS.beginPath(); canvasS.arc(s.x,s.y,s.s,0,Math.PI*2); canvasS.fill(); if(Math.random()>0.99) s.a=Math.random(); });
         }
+        
+        // Lightning Bolts (Storm Engine)
+        if (STATE.lightningBolts.length > 0) {
+            STATE.lightningBolts.forEach((bolt, index) => {
+                canvasP.strokeStyle = `rgba(255, 255, 255, ${bolt.opacity})`;
+                canvasP.lineWidth = 2;
+                canvasP.shadowBlur = 20;
+                canvasP.shadowColor = "#a855f7"; // Purple glow
+                canvasP.beginPath();
+                canvasP.moveTo(bolt.segments[0].x, bolt.segments[0].y);
+                for (let i = 1; i < bolt.segments.length; i++) {
+                    canvasP.lineTo(bolt.segments[i].x, bolt.segments[i].y);
+                }
+                canvasP.stroke();
+                canvasP.shadowBlur = 0; // Reset
+                
+                bolt.opacity -= 0.05; // Fade out
+                if (bolt.opacity <= 0) STATE.lightningBolts.splice(index, 1);
+            });
+        }
+
+        // Precipitation
         particles.forEach(p => {
-            p.y += p.vy; if(p.type==='snow') p.x+=Math.sin(p.y*0.01);
+            p.y += p.vy; 
+            p.x += p.vx || 0; // Add wind drift
+            if(p.type==='snow') p.x+=Math.sin(p.y*0.01);
+            
             if(p.y>h) { p.y=-10; p.x=Math.random()*w; }
+            if(p.x>w) { p.x=0; }
+            if(p.x<0) { p.x=w; }
+
             canvasP.beginPath();
-            if(p.type==='rain') { canvasP.strokeStyle='rgba(200,230,255,0.4)'; canvasP.lineWidth=1; canvasP.moveTo(p.x,p.y); canvasP.lineTo(p.x,p.y+p.len); canvasP.stroke(); } 
+            if(p.type==='rain') { 
+                canvasP.strokeStyle='rgba(200,230,255,0.4)'; 
+                canvasP.lineWidth=1; 
+                canvasP.moveTo(p.x,p.y); 
+                // Slant rain based on wind
+                canvasP.lineTo(p.x - (p.vx || 0)*2, p.y+p.len); 
+                canvasP.stroke(); 
+            } 
             else { canvasP.fillStyle='rgba(255,255,255,0.8)'; canvasP.arc(p.x,p.y,p.s,0,Math.PI*2); canvasP.fill(); }
         });
         STATE.animationId = requestAnimationFrame(loop);
@@ -630,11 +705,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function setAtmosphere(code, isDay) {
+        // Stop lightning loop if not storm
+        if (STATE.lightningTimer) clearTimeout(STATE.lightningTimer);
+        
         const meta = weatherMeta[code] || weatherMeta[0];
         const type = meta.type;
         const c = isDay ? meta.day : meta.night;
         ui.sky.style.background = `linear-gradient(to bottom, ${c[0]}, ${c[1]})`;
         
+        // Update Favicon based on weather
+        let iconName = 'sunny';
+        if(type === 'cloudy') iconName = 'partly_cloudy_day';
+        if(type === 'overcast') iconName = 'cloud';
+        if(type === 'rain') iconName = 'rainy';
+        if(type === 'snow') iconName = 'weather_snowy';
+        if(type === 'storm') iconName = 'thunderstorm';
+        if(!isDay && type === 'clear') iconName = 'clear_night';
+        ui.favicon.href = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${iconName}/default/24px.svg`;
+
         ui.aurora.innerHTML = '';
         let color = isDay ? (type==='storm'?'bg-purple-500':'bg-cyan-400') : (type==='storm'?'bg-purple-900':'bg-blue-900');
         ui.aurora.innerHTML = `<div class="aurora-blob ${color} w-[600px] h-[600px] top-[-20%] left-[-10%]"></div>`;
@@ -658,13 +746,60 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         particles = [];
-        if(type==='rain'||type==='storm') for(let i=0;i<400;i++) particles.push({x:Math.random()*w,y:Math.random()*h,vy:Math.random()*15+15,len:20,type:'rain'});
+        if(type==='rain'||type==='storm') {
+            // More particles for storm, faster speed
+            const count = type==='storm' ? 800 : 400;
+            const speedBase = type==='storm' ? 25 : 15;
+            // Wind effect
+            const wind = type==='storm' ? 5 : 0;
+            
+            for(let i=0;i<count;i++) {
+                particles.push({
+                    x:Math.random()*w,
+                    y:Math.random()*h,
+                    vy:Math.random()*15+speedBase,
+                    vx: wind, // Horizontal movement
+                    len:20,
+                    type:'rain'
+                });
+            }
+        }
         if(type==='snow') for(let i=0;i<200;i++) particles.push({x:Math.random()*w,y:Math.random()*h,vy:Math.random()*2+1,s:Math.random()*3+1,type:'snow'});
+        
         if(type==='storm') triggerLightning();
     }
+
     function triggerLightning() {
-        const f = document.createElement('div'); f.className = 'flash-anim'; ui.lightning.appendChild(f);
-        setTimeout(()=>f.remove(), 300); setTimeout(triggerLightning, Math.random()*5000+2000);
+        // 1. Sheet Lightning (Flash)
+        const f = document.createElement('div'); 
+        f.className = 'flash-anim'; 
+        
+        // Randomize flash position/style for sheet lightning feel
+        const x = Math.random() * 100;
+        const y = Math.random() * 50; // Upper half of screen
+        f.style.background = `radial-gradient(circle at ${x}% ${y}%, rgba(255, 255, 255, 0.8) 0%, transparent 60%)`;
+        
+        ui.lightning.appendChild(f);
+        setTimeout(()=>f.remove(), 300); 
+
+        // 2. Bolt Generation (Canvas)
+        if(Math.random() > 0.4) { // 60% chance of visible bolt
+            const startX = Math.random() * w;
+            const segments = [{x: startX, y: -50}];
+            let currentX = startX;
+            let currentY = -50;
+            
+            while (currentY < h * 0.8) {
+                currentX += (Math.random() - 0.5) * 50; // Jitter X
+                currentY += Math.random() * 30 + 10; // Move Down
+                segments.push({x: currentX, y: currentY});
+            }
+            
+            STATE.lightningBolts.push({ segments: segments, opacity: 1 });
+        }
+
+        // Loop with random delay
+        STATE.lightningTimer = setTimeout(triggerLightning, Math.random()*2000 + 500);
     }
 
     // --- LOGIC ---
@@ -679,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
                 fetch(`${CONFIG.aqi}?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,nitrogen_dioxide,ozone`).then(r=>r.json())
             ]);
-            STATE.data = { ...w, aqi: a.current, cityName: name };
+            STATE.data = { ...w, aqi: a.current, cityName: name, lat, lon }; // Saved lat/lon for refresh
             // Simulate minimal network delay for skeleton effect demonstration
             setTimeout(() => { renderUI(); toggleSkeleton(false); }, 600);
         } catch(e) { console.error(e); ui.city.textContent = "Error"; }
@@ -695,12 +830,14 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMoonWidget(phase);
 
         setAtmosphere(cur.weather_code, isDay);
-
-        // Main
-        ui.city.textContent = d.cityName;
+        
+        // Main Icon update
         const meta = weatherMeta[cur.weather_code] || weatherMeta[0];
         ui.desc.textContent = meta.type.toUpperCase();
         ui.bgIcon.textContent = meta.type==='clear'?(isDay?'sunny':'clear_night'):meta.type==='cloudy'?'partly_cloudy_day':meta.type==='overcast'?'cloud':meta.type==='rain'?'rainy':meta.type==='snow'?'weather_snowy':'thunderstorm';
+
+        // Main
+        ui.city.textContent = d.cityName;
 
         // Temps
         let t=cur.temperature_2m, fl=cur.apparent_temperature, mx=d.daily.temperature_2m_max[0], mn=d.daily.temperature_2m_min[0];
@@ -758,6 +895,36 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.aqiBadge.textContent = d.aqi.us_aqi<=50?'Good':d.aqi.us_aqi<=100?'Moderate':'Poor';
         ui.aqiBadge.className = `text-xs font-bold px-2 py-1 rounded bg-${d.aqi.us_aqi<=50?'green':d.aqi.us_aqi<=100?'yellow':'red'}-500/20 text-${d.aqi.us_aqi<=50?'green':d.aqi.us_aqi<=100?'yellow':'red'}-400`;
         ui.pm25.textContent = d.aqi.pm2_5; ui.no2.textContent = d.aqi.nitrogen_dioxide; ui.o3.textContent = d.aqi.ozone;
+
+        // Activity Logic
+        const setActivity = (id, score, text, colorClass) => {
+            ui[id].textContent = text;
+            ui[id].className = `text-sm font-bold ${colorClass}`;
+        };
+
+        // Running (Ideal: 10-20C, No Rain, Low Wind)
+        let runScore = "Good"; let runColor = "text-green-400";
+        if(cur.precipitation > 0 || cur.wind_speed_10m > 30 || cur.temperature_2m > 30 || cur.temperature_2m < 5) { runScore = "Poor"; runColor = "text-red-400"; }
+        else if(cur.temperature_2m >= 10 && cur.temperature_2m <= 22) { runScore = "Ideal"; runColor = "text-cyan-400"; }
+        setActivity('actRun', runScore, runScore, runColor);
+
+        // Driving (Vis < 2000m, Rain/Snow codes)
+        let driveScore = "Good"; let driveColor = "text-green-400";
+        if(cur.visibility < 2000 || cur.weather_code >= 71) { driveScore = "Hazardous"; driveColor = "text-red-400"; }
+        else if(cur.precipitation > 2 || cur.weather_code >= 51) { driveScore = "Caution"; driveColor = "text-yellow-400"; }
+        setActivity('actDrive', driveScore, driveScore, driveColor);
+
+        // Outdoor (UV, AQI, Rain)
+        let outScore = "Great"; let outColor = "text-green-400";
+        if(d.aqi.us_aqi > 150 || cur.precipitation > 0 || cur.uv_index >= 8) { outScore = "Limit"; outColor = "text-red-400"; }
+        else if(d.aqi.us_aqi > 100 || cur.uv_index >= 6) { outScore = "Moderate"; outColor = "text-yellow-400"; }
+        setActivity('actOut', outScore, outScore, outColor);
+
+        // Health (AQI, Extreme Temps)
+        let healthScore = "Good"; let healthColor = "text-green-400";
+        if(d.aqi.us_aqi > 150 || cur.temperature_2m > 35 || cur.temperature_2m < -10) { healthScore = "Risk"; healthColor = "text-red-400"; }
+        else if(d.aqi.us_aqi > 100) { healthScore = "Fair"; healthColor = "text-yellow-400"; }
+        setActivity('actHealth', healthScore, healthScore, healthColor);
 
         // Forecast List
         ui.forecast.innerHTML = '';
@@ -870,7 +1037,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 { label:'Temp', data, borderColor: color, backgroundColor:(c)=>{const g=c.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,isHot?'rgba(249,115,22,0.3)':'rgba(34,211,238,0.3)');g.addColorStop(1,'rgba(0,0,0,0)');return g;}, borderWidth:2, tension:0.4, fill:true, yAxisID:'y'},
                 { label:'Rain %', data:rain, borderColor:'#3b82f6', borderDash:[5,5], borderWidth:1, pointRadius:0, fill:false, yAxisID:'y1' }
             ]},
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false}, y:{display:false}, y1:{display:false, min:0, max:100}} }
+            options: { 
+                responsive:true, 
+                maintainAspectRatio:false, 
+                resizeDelay: 0,
+                animation: false, 
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins:{
+                    legend:{display:false},
+                    tooltip: {
+                        backgroundColor: 'rgba(10, 14, 24, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += Math.round(context.parsed.y);
+                                    if(context.dataset.yAxisID === 'y') label += STATE.metric ? '°C' : '°F';
+                                    else label += '%';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }, 
+                scales:{x:{display:false}, y:{display:false}, y1:{display:false, min:0, max:100}} 
+            }
         });
     }
 
@@ -908,9 +1111,28 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.input.addEventListener('keydown', e => { if(e.key === 'Enter' && ui.suggestions.children.length > 0) { ui.suggestions.children[0].click(); ui.input.blur(); } });
     ui.clearBtn.onclick = () => { ui.input.value = ''; ui.clearBtn.classList.add('hidden'); ui.suggestions.classList.add('hidden'); ui.input.focus(); };
 
-    const setUnit = (m) => { STATE.metric=m; ui.unitPill.style.transform=m?'translateX(0)':'translateX(100%)'; ui.btnC.style.color=m?'#fff':'#6b7280'; ui.btnF.style.color=!m?'#fff':'#6b7280'; renderUI(); };
+    const setUnit = (m) => { 
+        STATE.metric=m; 
+        localStorage.setItem('aether_units', m); // Save preference
+        ui.unitPill.style.transform=m?'translateX(0)':'translateX(100%)'; 
+        ui.btnC.style.color=m?'#fff':'#6b7280'; 
+        ui.btnF.style.color=!m?'#fff':'#6b7280'; 
+        renderUI(); 
+    };
     ui.btnC.onclick = () => setUnit(true); ui.btnF.onclick = () => setUnit(false);
     ui.gpsBtn.onclick = () => navigator.geolocation.getCurrentPosition(p => fetchWeather(p.coords.latitude, p.coords.longitude, "My Location"));
+    
+    // Manual Refresh
+    ui.refreshBtn.onclick = () => {
+        if(STATE.data && STATE.data.lat && STATE.data.lon) {
+            fetchWeather(STATE.data.lat, STATE.data.lon, STATE.data.cityName);
+        }
+    };
+
+    // Close menus on click outside
+    document.addEventListener('click', e => { 
+        if(!el('search-input').contains(e.target) && !ui.clearBtn.contains(e.target)) ui.suggestions.classList.add('hidden'); 
+    });
 
     function renderFavs() {
         ui.favBar.innerHTML = ''; ui.favBar.classList.remove('opacity-0');
@@ -930,7 +1152,29 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('aether_favs_v12', JSON.stringify(STATE.favorites)); renderFavs();
     };
 
-    fetchWeather(51.5074, -0.1278, "London");
+    // --- STARTUP LOGIC ---
+    function initApp() {
+        if(navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (p) => fetchWeather(p.coords.latitude, p.coords.longitude, "My Location"),
+                (e) => {
+                    console.log("GPS Denied, using random.");
+                    loadRandomCity();
+                }
+            );
+        } else {
+            loadRandomCity();
+        }
+    }
+
+    function loadRandomCity() {
+        const c = RANDOM_CITIES[Math.floor(Math.random() * RANDOM_CITIES.length)];
+        fetchWeather(c.lat, c.lon, c.name);
+    }
+
+    // Start
+    initApp();
+    
     document.addEventListener('click', e => { if(!el('search-input').contains(e.target) && !ui.clearBtn.contains(e.target)) ui.suggestions.classList.add('hidden'); });
 });
 </script>
