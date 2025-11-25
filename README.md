@@ -298,6 +298,6 @@ Feel free to open issues or submit pull requests.
 
 ---
 
-# 📜 **License**
+## 📜 **License**
+Licensed under the [MIT License](https://github.com/monish21072004/Weather-App/blob/main/LICENSE).
 
-MIT License.
