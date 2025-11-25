@@ -267,7 +267,11 @@
                     <div class="relative flex items-center bg-white/5 border border-white/10 rounded-full px-5 py-3 backdrop-blur-md focus-within:bg-black/60 focus-within:border-cyan-400/50 transition-all shadow-lg">
                         <span class="material-symbols-rounded text-gray-400">search</span>
                         <input autocomplete="off" enterkeyhint="search" class="w-full bg-transparent border-none outline-none text-white ml-3 text-sm font-medium placeholder-gray-500 h-full" id="search-input" placeholder="Search global sector..." type="text">
-                        <button id="clear-btn" class="hidden text-gray-500 hover:text-white transition-colors">
+                        <!-- Mic Button -->
+                        <button id="mic-btn" class="text-gray-500 hover:text-white transition-colors ml-2">
+                            <span class="material-symbols-rounded text-sm">mic</span>
+                        </button>
+                        <button id="clear-btn" class="hidden text-gray-500 hover:text-white transition-colors ml-2">
                             <span class="material-symbols-rounded text-sm">close</span>
                         </button>
                     </div>
@@ -609,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboard: el('dashboard'), input: el('search-input'), suggestions: el('suggestions'), clearBtn: el('clear-btn'),
         gpsBtn: el('gps-btn'), refreshBtn: el('refresh-btn'), exploreBtn: el('explore-btn'), localBtn: el('local-btn'), 
         btnC: el('btn-c'), btnF: el('btn-f'), unitPill: el('unit-pill'),
+        micBtn: el('mic-btn'), // MIC BUTTON RE-ADDED
         favicon: el('dynamic-favicon'), statusDot: el('status-dot'), statusText: el('status-text'),
         // Explore Modal
         exploreModal: el('explore-modal'), closeExplore: el('close-explore'), 
@@ -1040,7 +1045,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSkeleton(true);
         try {
             const [w, a] = await Promise.all([
-                fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
+                fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
                 fetch(`${CONFIG.aqi}?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,nitrogen_dioxide,ozone`).then(r=>r.json())
             ]);
             STATE.data = { ...w, aqi: a.current, cityName: name, lat, lon, timestamp: Date.now() }; 
@@ -1345,6 +1350,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     ui.input.addEventListener('keydown', e => { if(e.key === 'Enter' && ui.suggestions.children.length > 0) { ui.suggestions.children[0].click(); ui.input.blur(); } });
     ui.clearBtn.onclick = () => { ui.input.value = ''; ui.clearBtn.classList.add('hidden'); ui.suggestions.classList.add('hidden'); ui.input.focus(); };
+
+    // MIC LOGIC (Web Speech API)
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = 'en-US';
+
+        ui.micBtn.onclick = () => {
+            if (ui.micBtn.classList.contains('listening')) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        };
+
+        recognition.onstart = () => {
+            ui.micBtn.classList.add('listening', 'text-red-400', 'animate-pulse');
+            ui.micBtn.classList.remove('text-gray-500');
+        };
+
+        recognition.onend = () => {
+            ui.micBtn.classList.remove('listening', 'text-red-400', 'animate-pulse');
+            ui.micBtn.classList.add('text-gray-500');
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            ui.input.value = transcript;
+            ui.input.focus();
+            // Trigger input event manually to show suggestions
+            ui.input.dispatchEvent(new Event('input'));
+        };
+    } else {
+        ui.micBtn.style.display = 'none';
+    }
 
     const setUnit = (m) => { 
         STATE.metric=m; 
