@@ -9,6 +9,9 @@
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect">
@@ -226,6 +229,25 @@
             border-color: rgba(6, 182, 212, 0.4);
             box-shadow: 0 0 30px rgba(6, 182, 212, 0.1);
         }
+
+        /* --- LEAFLET CUSTOMIZATION --- */
+        .leaflet-container {
+            background: #0f172a !important; /* Match app dark theme */
+            font-family: 'Outfit', sans-serif;
+        }
+        .leaflet-popup-content-wrapper {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+        }
+        .leaflet-popup-tip {
+            background: rgba(15, 23, 42, 0.9);
+        }
+        .leaflet-popup-close-button {
+            color: #cbd5e1 !important;
+        }
     </style>
 </head>
 <body class="selection:bg-cyan-500/30">
@@ -248,7 +270,7 @@
 
     <!-- EXPLORE MODAL -->
     <div id="explore-modal">
-        <div class="w-full max-w-5xl h-[90vh] flex flex-col">
+        <div class="w-full max-w-6xl h-[90vh] flex flex-col">
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h2 class="text-2xl font-bold font-display text-white uppercase tracking-widest" id="explore-title">Global Sentry</h2>
@@ -256,7 +278,10 @@
                 </div>
                 <!-- Controls Container -->
                 <div class="flex items-center gap-3">
-                    <button id="rescan-btn" class="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/30 hover:border-cyan-400/50 flex items-center justify-center text-cyan-300 transition-all shadow-lg group">
+                    <button id="map-btn" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:text-cyan-400 flex items-center justify-center text-gray-300 transition-all shadow-lg group" title="Toggle Map View">
+                        <span class="material-symbols-rounded">map</span>
+                    </button>
+                    <button id="rescan-btn" class="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/30 hover:border-cyan-400/50 flex items-center justify-center text-cyan-300 transition-all shadow-lg group" title="Rescan">
                         <span class="material-symbols-rounded group-hover:rotate-180 transition-transform duration-500">sync</span>
                     </button>
                     <button id="close-explore" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
@@ -270,9 +295,13 @@
                 <p class="text-sm text-gray-400 font-mono animate-pulse" id="explore-loading-text">Triangulating Sectors...</p>
             </div>
 
+            <!-- List View -->
             <div id="explore-content" class="hidden flex-1 overflow-y-auto custom-scroll grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
                 <!-- Injected Sections -->
             </div>
+
+            <!-- Map View Container -->
+            <div id="explore-map" class="hidden flex-1 rounded-2xl overflow-hidden border border-white/10 relative z-10"></div>
         </div>
     </div>
 
@@ -620,7 +649,11 @@ document.addEventListener('DOMContentLoaded', () => {
         animationId: null,
         lightningBolts: [],
         favorites: JSON.parse(localStorage.getItem('aether_favs_v12')) || ['London', 'Tokyo', 'New York'],
-        timeOffset: 0 // Hours from "now"
+        timeOffset: 0, // Hours from "now"
+        currentScanResults: [], // STORE SCAN RESULTS
+        map: null, // LEAFLET MAP INSTANCE
+        mapMarkers: [], // STORE MARKERS
+        isMapView: false
     };
     
     // Fallback Cities for Random Selection (Startup)
@@ -683,6 +716,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Explore Modal
         exploreModal: el('explore-modal'), closeExplore: el('close-explore'), 
         exploreContent: el('explore-content'), exploreLoading: el('explore-loading'),
+        exploreMap: el('explore-map'), // NEW
+        mapBtn: el('map-btn'), // NEW
         exploreTitle: el('explore-title'), exploreSubtitle: el('explore-subtitle'),
         rescanBtn: el('rescan-btn'), // NEW RESCAN BTN
         // Main Data
@@ -742,6 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.exploreSubtitle.textContent = "Targeted Atmospheric Scan";
         ui.exploreModal.classList.add('open');
         scanGlobalWeather();
+        toggleMapView(false);
     };
 
     ui.rescanBtn.onclick = () => {
@@ -770,9 +806,119 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             alert("GPS not supported.");
         }
+        toggleMapView(false);
     };
 
     ui.closeExplore.onclick = () => ui.exploreModal.classList.remove('open');
+
+    // --- MAP LOGIC ---
+    function initMap() {
+        if (!STATE.map) {
+            STATE.map = L.map('explore-map').setView([20, 0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(STATE.map);
+        }
+    }
+
+    ui.mapBtn.onclick = () => {
+        toggleMapView(!STATE.isMapView);
+    };
+
+    function toggleMapView(showMap) {
+        STATE.isMapView = showMap;
+        if (showMap) {
+            ui.exploreContent.classList.add('hidden');
+            ui.exploreMap.classList.remove('hidden');
+            ui.mapBtn.classList.add('text-cyan-400', 'bg-white/10');
+            
+            // Initialize map if not already
+            initMap();
+            // Must invalidate size after container becomes visible
+            setTimeout(() => {
+                STATE.map.invalidateSize();
+                renderMapMarkers();
+            }, 100);
+        } else {
+            ui.exploreContent.classList.remove('hidden');
+            ui.exploreMap.classList.add('hidden');
+            ui.mapBtn.classList.remove('text-cyan-400', 'bg-white/10');
+        }
+    }
+
+    function getMarkerIconName(code, isDay) {
+        if (code === 0 || code === 1) return isDay ? 'sunny' : 'clear_night';
+        if (code === 2 || code === 3) return isDay ? 'partly_cloudy_day' : 'partly_cloudy_night';
+        if (code === 45 || code === 48) return 'foggy';
+        if (code >= 51 && code <= 67 || code >= 80 && code <= 82) return 'rainy';
+        if (code >= 71 && code <= 77 || code === 85 || code === 86) return 'weather_snowy';
+        if (code >= 95) return 'thunderstorm';
+        return 'cloud'; // Default overcast/cloudy
+    }
+
+    function renderMapMarkers() {
+        if (!STATE.map) return;
+        
+        // Clear existing markers
+        STATE.mapMarkers.forEach(m => STATE.map.removeLayer(m));
+        STATE.mapMarkers = [];
+
+        if (STATE.currentScanResults.length > 0) {
+            const bounds = L.latLngBounds();
+            
+            STATE.currentScanResults.forEach(place => {
+                const temp = Math.round(STATE.metric ? place.temperature_2m : place.temperature_2m * 1.8 + 32);
+                const isDay = place.is_day === 1;
+                const iconName = getMarkerIconName(place.weather_code, isDay);
+                const markerColor = getMarkerColor(place.weather_code);
+                
+                // UPDATED: Icon-based Marker
+                const markerHtml = `
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full border-2 border-white shadow-lg ${markerColor} text-white">
+                        <span class="material-symbols-rounded text-[18px]">${iconName}</span>
+                    </div>
+                `;
+                
+                const icon = L.divIcon({
+                    className: 'custom-map-marker',
+                    html: markerHtml,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
+
+                const marker = L.marker([place.lat, place.lon], { icon: icon })
+                    .addTo(STATE.map)
+                    .bindPopup(`
+                        <div class="text-center">
+                            <h3 class="font-bold text-lg text-white mb-1">${place.name}</h3>
+                            <div class="text-cyan-400 font-mono text-xl font-bold mb-2">${temp}°${STATE.metric ? 'C' : 'F'}</div>
+                            <button onclick="loadFromExplore(${place.lat}, ${place.lon}, '${place.name}')" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold py-1 px-3 rounded-full transition-colors w-full">
+                                ANALYZE SECTOR
+                            </button>
+                        </div>
+                    `);
+                
+                STATE.mapMarkers.push(marker);
+                bounds.extend([place.lat, place.lon]);
+            });
+
+            // Fit map to markers if we have any
+            if (STATE.mapMarkers.length > 0) {
+                STATE.map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+    }
+
+    function getMarkerColor(code) {
+        if (code === 0 || code === 1) return 'bg-yellow-500';
+        if (code === 2 || code === 3 || code === 45 || code === 48) return 'bg-gray-500';
+        if (code >= 51 && code <= 67 || code >= 80 && code <= 82) return 'bg-blue-500';
+        if (code >= 71 && code <= 77 || code === 85 || code === 86) return 'bg-cyan-400';
+        if (code >= 95) return 'bg-purple-600';
+        return 'bg-gray-500';
+    }
 
     // SMART SAMPLING SCAN (UPDATED)
     async function scanGlobalWeather() {
@@ -780,6 +926,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.exploreLoading.innerHTML = '<div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div><p class="text-sm text-gray-400 font-mono animate-pulse">Scanning Climate Sectors...</p>';
         ui.exploreContent.classList.add('hidden');
         ui.exploreContent.innerHTML = '';
+        ui.exploreMap.classList.add('hidden'); // Hide map while loading
 
         // Helper to pick N random items from an array
         const pickRandom = (arr, n) => [...arr].sort(() => 0.5 - Math.random()).slice(0, n);
@@ -810,7 +957,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }))
             });
             const results = await Promise.all(promises);
+            STATE.currentScanResults = results; // Store for map
             renderExploreGrid(results);
+            if (STATE.isMapView) renderMapMarkers(); // Update map if visible
         } catch(e) { console.error(e); }
     }
 
@@ -820,6 +969,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.exploreLoading.innerHTML = '<div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div><p class="text-sm text-gray-400 font-mono animate-pulse">Scanning Local Sectors...</p>';
         ui.exploreContent.classList.add('hidden');
         ui.exploreContent.innerHTML = '';
+        ui.exploreMap.classList.add('hidden');
 
         // Generate 8 points around user (approx 15km radius)
         // 0.15 deg lat ~= 16km
@@ -842,7 +992,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(data => ({ ...sec, ...data.current }))
             );
             const results = await Promise.all(promises);
+            STATE.currentScanResults = results; // Store for map
             renderExploreGrid(results);
+            if (STATE.isMapView) renderMapMarkers();
         } catch(e) { console.error(e); }
     }
 
@@ -888,7 +1040,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         ui.exploreLoading.classList.add('hidden');
-        ui.exploreContent.classList.remove('hidden');
+        if (!STATE.isMapView) ui.exploreContent.classList.remove('hidden');
+        else ui.exploreMap.classList.remove('hidden');
     }
 
     // Exposed function for onclick in HTML string
@@ -1239,6 +1392,62 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // SOLAR TRACKER LOGIC
+    function updateSolarTracker(sunriseStr, sunsetStr, timezone, customTimeDate) {
+        // Convert API ISO strings to Date objects relative to current day
+        const now = customTimeDate || new Date();
+        const sunrise = new Date(sunriseStr);
+        const sunset = new Date(sunsetStr);
+        
+        // Ensure accurate dates for calculation
+        const nowTime = now.getTime();
+        const riseTime = sunrise.getTime();
+        const setTime = sunset.getTime();
+        
+        ui.sunrise.textContent = sunrise.toLocaleTimeString('en-US',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hour12:false});
+        ui.sunset.textContent = sunset.toLocaleTimeString('en-US',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hour12:false});
+
+        let pct = 0; // 0 = left (rise), 1 = right (set)
+        const isDay = nowTime >= riseTime && nowTime <= setTime;
+        
+        if (isDay) {
+            // Day: Move Sun
+            pct = (nowTime - riseTime) / (setTime - riseTime);
+            ui.markerSun.classList.remove('opacity-0');
+            ui.markerMoon.classList.add('opacity-0');
+        } else {
+            // Night: Move Moon (Inverse logic for visual loop)
+            // If before sunrise, it's late night. If after sunset, early night.
+            ui.markerSun.classList.add('opacity-0');
+            ui.markerMoon.classList.remove('opacity-0');
+            
+            // Simplified night tracking for visual loop (not astronomically perfect but visually consistent)
+            const prevSunset = setTime - 86400000; 
+            const nextSunrise = riseTime + 86400000; 
+            
+            if(nowTime > setTime) {
+                // Evening until midnight
+                 pct = (nowTime - setTime) / (nextSunrise - setTime); 
+            } else {
+                // Midnight until sunrise
+                 pct = (nowTime - (riseTime - 43200000)) / 43200000; 
+            }
+        }
+
+        // Clamp 0-1
+        pct = Math.max(0, Math.min(1, pct));
+        
+        const angle = Math.PI - (pct * Math.PI); // PI -> 0
+        const r = 90;
+        const cx = 100;
+        const cy = 90;
+        
+        const x = cx + r * Math.cos(angle);
+        const y = cy - r * Math.sin(angle);
+        
+        ui.solarMarker.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
     function renderUI() {
         const d = STATE.data;
         if (!d) return;
@@ -1390,62 +1599,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderChart(d.hourly);
         ui.radar.src = `https://embed.windy.com/embed.html?lat=${d.latitude}&lon=${d.longitude}&zoom=7&overlay=rain&menu=&metricWind=${STATE.metric?'kmh':'kt'}&metricTemp=${STATE.metric?'°C':'°F'}&isolines=false`;
         renderFavs();
-    }
-
-    // SOLAR TRACKER LOGIC
-    function updateSolarTracker(sunriseStr, sunsetStr, timezone, customTimeDate) {
-        // Convert API ISO strings to Date objects relative to current day
-        const now = customTimeDate || new Date();
-        const sunrise = new Date(sunriseStr);
-        const sunset = new Date(sunsetStr);
-        
-        // Ensure accurate dates for calculation
-        const nowTime = now.getTime();
-        const riseTime = sunrise.getTime();
-        const setTime = sunset.getTime();
-        
-        ui.sunrise.textContent = sunrise.toLocaleTimeString('en-US',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hour12:false});
-        ui.sunset.textContent = sunset.toLocaleTimeString('en-US',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hour12:false});
-
-        let pct = 0; // 0 = left (rise), 1 = right (set)
-        const isDay = nowTime >= riseTime && nowTime <= setTime;
-        
-        if (isDay) {
-            // Day: Move Sun
-            pct = (nowTime - riseTime) / (setTime - riseTime);
-            ui.markerSun.classList.remove('opacity-0');
-            ui.markerMoon.classList.add('opacity-0');
-        } else {
-            // Night: Move Moon (Inverse logic for visual loop)
-            // If before sunrise, it's late night. If after sunset, early night.
-            ui.markerSun.classList.add('opacity-0');
-            ui.markerMoon.classList.remove('opacity-0');
-            
-            // Simplified night tracking for visual loop (not astronomically perfect but visually consistent)
-            const prevSunset = setTime - 86400000; 
-            const nextSunrise = riseTime + 86400000; 
-            
-            if(nowTime > setTime) {
-                // Evening until midnight
-                 pct = (nowTime - setTime) / (nextSunrise - setTime); 
-            } else {
-                // Midnight until sunrise
-                 pct = (nowTime - (riseTime - 43200000)) / 43200000; 
-            }
-        }
-
-        // Clamp 0-1
-        pct = Math.max(0, Math.min(1, pct));
-        
-        const angle = Math.PI - (pct * Math.PI); // PI -> 0
-        const r = 90;
-        const cx = 100;
-        const cy = 90;
-        
-        const x = cx + r * Math.cos(angle);
-        const y = cy - r * Math.sin(angle);
-        
-        ui.solarMarker.style.transform = `translate(${x}px, ${y}px)`;
     }
 
     function renderChart(hourly) {
