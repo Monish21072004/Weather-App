@@ -1,3 +1,7 @@
+![Version](https://img.shields.io/badge/Aether%20V4-Chronosphere-06b6d4?style=for-the-badge&logo=weather&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+
 # 🌐 **Aether Weather – Version 4.0 (Chronosphere)**
 
 ### *Cinematic Atmospheric Intelligence Platform – Rebuilt for 2025*
