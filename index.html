@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
-    <title>Aether Station V3</title>
+    <title>Aether Station V4: Chronosphere</title>
     <link rel="icon" type="image/png" href="https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/sunny/default/24px.svg" id="dynamic-favicon">
     
     <!-- Libraries -->
@@ -44,12 +44,12 @@
         #sky-gradient {
             position: fixed; inset: 0; z-index: -50;
             background: linear-gradient(to bottom, #0f172a, #020617);
-            transition: background 2s ease;
+            transition: background 1s ease; /* Faster transition for scrubbing */
         }
 
         #star-canvas {
             position: fixed; inset: 0; z-index: -45;
-            opacity: 0; transition: opacity 2s; pointer-events: none;
+            opacity: 0; transition: opacity 1s; pointer-events: none;
         }
 
         /* Ambient Aurora */
@@ -68,7 +68,7 @@
         #celestial-container {
             position: fixed; top: 10%; right: 10%; width: 160px; height: 160px;
             z-index: -35; pointer-events: none;
-            transition: all 2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: all 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .sun-orb {
             width: 100%; height: 100%; border-radius: 50%;
@@ -198,6 +198,34 @@
         .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        /* --- CHRONOSPHERE (Range Input) --- */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%;
+            background: #ffffff; cursor: pointer; margin-top: -10px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.5);
+            border: 2px solid #06b6d4;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer;
+            background: rgba(255,255,255,0.2); border-radius: 2px;
+        }
+        /* Firefox */
+        input[type=range]::-moz-range-thumb {
+            height: 24px; width: 24px; border-radius: 50%;
+            background: #ffffff; cursor: pointer; border: 2px solid #06b6d4;
+        }
+        input[type=range]::-moz-range-track {
+            width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 2px;
+        }
+        
+        .simulation-active .glass {
+            border-color: rgba(6, 182, 212, 0.4);
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.1);
+        }
     </style>
 </head>
 <body class="selection:bg-cyan-500/30">
@@ -224,16 +252,22 @@
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h2 class="text-2xl font-bold font-display text-white uppercase tracking-widest" id="explore-title">Global Sentry</h2>
-                    <p class="text-sm text-cyan-400 font-mono" id="explore-subtitle">Live Atmospheric Scan</p>
+                    <p class="text-sm text-cyan-400 font-mono" id="explore-subtitle">Targeted Atmospheric Scan</p>
                 </div>
-                <button id="close-explore" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
+                <!-- Controls Container -->
+                <div class="flex items-center gap-3">
+                    <button id="rescan-btn" class="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/30 hover:border-cyan-400/50 flex items-center justify-center text-cyan-300 transition-all shadow-lg group">
+                        <span class="material-symbols-rounded group-hover:rotate-180 transition-transform duration-500">sync</span>
+                    </button>
+                    <button id="close-explore" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
             </div>
             
             <div id="explore-loading" class="flex-1 flex flex-col items-center justify-center">
                 <div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div>
-                <p class="text-sm text-gray-400 font-mono animate-pulse" id="explore-loading-text">Scanning Sectors...</p>
+                <p class="text-sm text-gray-400 font-mono animate-pulse" id="explore-loading-text">Triangulating Sectors...</p>
             </div>
 
             <div id="explore-content" class="hidden flex-1 overflow-y-auto custom-scroll grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
@@ -243,7 +277,7 @@
     </div>
 
     <!-- MAIN APP -->
-    <div class="relative w-full max-w-[1600px] mx-auto min-h-screen flex flex-col p-4 md:p-6 lg:p-8">
+    <div class="relative w-full max-w-[1600px] mx-auto min-h-screen flex flex-col p-4 md:p-6 lg:p-8 pb-32"> <!-- Added padding bottom for scrubber -->
         <!-- HEADER -->
         <header class="flex flex-col lg:flex-row justify-between items-center gap-6 mb-8 relative z-50">
             <!-- Logo -->
@@ -252,7 +286,7 @@
                     <span class="material-symbols-rounded text-white text-2xl">satellite_alt</span>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold font-display uppercase tracking-widest text-white">Aether <span class="text-cyan-400 text-sm align-top opacity-50">v3</span></h1>
+                    <h1 class="text-xl font-bold font-display uppercase tracking-widest text-white">Aether <span class="text-cyan-400 text-sm align-top opacity-50">v4</span></h1>
                     <div class="flex items-center gap-2">
                         <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" id="status-dot"></span>
                         <span class="text-[10px] text-cyan-200 tracking-[0.2em] uppercase font-mono" id="status-text">Online</span>
@@ -279,7 +313,7 @@
                 </div>
                 
                 <!-- Unit Toggle & GPS & Explore -->
-                <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start relative">
                     <button class="h-12 px-5 rounded-full bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 text-gray-300 transition-all flex items-center gap-2 shadow-lg" id="gps-btn" aria-label="Locate Me">
                         <span class="material-symbols-rounded">my_location</span>
                         <span class="text-xs font-bold uppercase hidden sm:inline">Locate</span>
@@ -325,11 +359,16 @@
             <!-- LEFT COLUMN (Main Info) -->
             <div class="lg:col-span-8 flex flex-col gap-6 min-w-0">
                 <!-- 1. HERO CARD -->
-                <div class="glass min-h-[450px] relative overflow-hidden group p-8 flex flex-col justify-between">
+                <div class="glass min-h-[450px] relative overflow-hidden group p-8 flex flex-col justify-between" id="hero-card">
                     <!-- Background Icon -->
                     <div class="absolute right-[-5%] bottom-[-10%] opacity-[0.05] transform scale-150 group-hover:scale-125 transition-transform duration-1000 pointer-events-none">
                         <span class="material-symbols-rounded text-[25rem] text-white" id="bg-icon">cloud</span>
                     </div>
+                    <!-- Simulation Badge -->
+                    <div class="absolute top-4 right-20 bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[10px] font-bold uppercase px-3 py-1 rounded-full hidden animate-pulse" id="sim-badge">
+                        Simulation Mode
+                    </div>
+
                     <div class="flex justify-between items-start z-10">
                         <div>
                             <div class="flex items-center gap-3 text-cyan-200/80 font-mono text-xs md:text-sm mb-3">
@@ -497,7 +536,7 @@
                                 <!-- Track -->
                                 <path d="M 10 90 A 90 90 0 0 1 190 90" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2" stroke-dasharray="4,4" />
                                 <!-- Sun/Moon Marker -->
-                                <g id="solar-marker" style="transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);">
+                                <g id="solar-marker" style="transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);">
                                     <!-- Sun Glow -->
                                     <circle cx="0" cy="0" r="8" fill="#fbbf24" class="opacity-0 transition-opacity duration-500" id="marker-sun" style="filter: drop-shadow(0 0 10px #fbbf24);"></circle>
                                     <!-- Moon Glow -->
@@ -543,6 +582,22 @@
                 <div class="flex flex-wrap gap-2 justify-center transition-opacity duration-1000 pb-6" id="fav-bar"></div>
             </div>
         </div>
+
+        <!-- CHRONOSPHERE SCRUBBER -->
+        <div class="fixed bottom-0 left-0 w-full z-40 px-4 pb-4 lg:px-8 lg:pb-8 flex justify-center pointer-events-none">
+            <div class="glass w-full max-w-2xl p-4 flex flex-col gap-2 pointer-events-auto shadow-2xl bg-black/80 backdrop-blur-xl">
+                <div class="flex justify-between items-center text-xs font-bold tracking-widest uppercase text-cyan-400 mb-1">
+                    <span id="chrono-label">Now</span>
+                    <span class="text-white/50" id="chrono-future">+24h</span>
+                </div>
+                <input type="range" min="0" max="24" value="0" step="1" id="time-slider">
+                <div class="flex justify-between items-center mt-1">
+                     <span class="text-[10px] text-gray-500 font-mono">LIVE FEED</span>
+                     <span class="text-[10px] text-gray-500 font-mono">SIMULATION</span>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 <script>
@@ -564,7 +619,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lightningTimer: null,
         animationId: null,
         lightningBolts: [],
-        favorites: JSON.parse(localStorage.getItem('aether_favs_v12')) || ['London', 'Tokyo', 'New York']
+        favorites: JSON.parse(localStorage.getItem('aether_favs_v12')) || ['London', 'Tokyo', 'New York'],
+        timeOffset: 0 // Hours from "now"
     };
     
     // Fallback Cities for Random Selection (Startup)
@@ -579,32 +635,41 @@ document.addEventListener('DOMContentLoaded', () => {
         {name: "Reykjavik", lat: 64.1466, lon: -21.9426}
     ];
 
-    // Diverse List for "Global Explore" - Expanded to ensure coverage
-    const EXPLORE_CITIES = [
-        // Major Hubs
-        {name: "London, UK", lat: 51.5074, lon: -0.1278}, {name: "Tokyo, JP", lat: 35.6762, lon: 139.6503},
-        {name: "New York, US", lat: 40.7128, lon: -74.0060}, {name: "Singapore", lat: 1.3521, lon: 103.8198},
-        // Cold / Snow Likely
-        {name: "Reykjavik, IS", lat: 64.1466, lon: -21.9426}, {name: "Yakutsk, RU", lat: 62.0355, lon: 129.6755},
-        {name: "Nuuk, GL", lat: 64.1814, lon: -51.6941}, {name: "Antarctica (McMurdo)", lat: -77.846, lon: 166.668},
-        {name: "Harbin, CN", lat: 45.8038, lon: 126.5349}, {name: "Anchorage, US", lat: 61.2181, lon: -149.9003},
-        {name: "Sapporo, JP", lat: 43.0618, lon: 141.3545}, {name: "Murmansk, RU", lat: 68.9585, lon: 33.0827},
-        // Hot / Clear Likely
-        {name: "Dubai, AE", lat: 25.2048, lon: 55.2708}, {name: "Cairo, EG", lat: 30.0444, lon: 31.2357},
-        {name: "Riyadh, SA", lat: 24.7136, lon: 46.6753}, {name: "Alice Springs, AU", lat: -23.6980, lon: 133.8807},
-        {name: "Las Vegas, US", lat: 36.1699, lon: -115.1398}, {name: "Phoenix, US", lat: 33.4484, lon: -112.0740},
-        // Rain / Storm / Tropical
-        {name: "Manaus, BR", lat: -3.1190, lon: -60.0217}, {name: "Jakarta, ID", lat: -6.2088, lon: 106.8456},
-        {name: "Kuala Lumpur, MY", lat: 3.1390, lon: 101.6869}, {name: "Mumbai, IN", lat: 19.0760, lon: 72.8777},
-        {name: "Hilo, US", lat: 19.7297, lon: -155.0900}, {name: "Bergen, NO", lat: 60.3913, lon: 5.3221},
-        // Windy / Cloudy / Temperate
-        {name: "Wellington, NZ", lat: -41.2866, lon: 174.7756}, {name: "Tórshavn, FO", lat: 62.0097, lon: -6.7720},
-        {name: "Seattle, US", lat: 47.6062, lon: -122.3321}, {name: "London, UK", lat: 51.5074, lon: -0.1278},
-        {name: "Lima, PE", lat: -12.0464, lon: -77.0428}, {name: "St. John's, CA", lat: 47.5615, lon: -52.7126},
-        // Southern Hemisphere
-        {name: "Cape Town, ZA", lat: -33.9249, lon: 18.4241}, {name: "Ushuaia, AR", lat: -54.8019, lon: -68.3030},
-        {name: "Sydney, AU", lat: -33.8688, lon: 151.2093}, {name: "Rio de Janeiro, BR", lat: -22.9068, lon: -43.1729}
-    ];
+    // --- SEGMENTED "SENTRY" DATABASE ---
+    const CLIMATE_ZONES = {
+        // High Latitude / High Altitude / Cold
+        cryo: [
+            {name: "McMurdo Stn, AQ", lat: -77.846, lon: 166.668}, {name: "Yakutsk, RU", lat: 62.0355, lon: 129.6755},
+            {name: "Nuuk, GL", lat: 64.1814, lon: -51.6941}, {name: "Svalbard, NO", lat: 78.2232, lon: 15.6267},
+            {name: "Anchorage, US", lat: 61.2181, lon: -149.9003}, {name: "Harbin, CN", lat: 45.8038, lon: 126.5349},
+            {name: "Tromso, NO", lat: 69.6492, lon: 18.9553}, {name: "Ushuaia, AR", lat: -54.8019, lon: -68.3030},
+            {name: "Yellowknife, CA", lat: 62.4540, lon: -114.3718}, {name: "Oymyakon, RU", lat: 63.4641, lon: 142.1537}
+        ],
+        // Tropical / Wet / Stormy
+        tropical: [
+            {name: "Singapore, SG", lat: 1.3521, lon: 103.8198}, {name: "Manaus, BR", lat: -3.1190, lon: -60.0217},
+            {name: "Mumbai, IN", lat: 19.0760, lon: 72.8777}, {name: "Jakarta, ID", lat: -6.2088, lon: 106.8456},
+            {name: "Kuala Lumpur, MY", lat: 3.1390, lon: 101.6869}, {name: "Bangkok, TH", lat: 13.7563, lon: 100.5018},
+            {name: "Lagos, NG", lat: 6.5244, lon: 3.3792}, {name: "Havana, CU", lat: 23.1136, lon: -82.3666},
+            {name: "Hilo, US", lat: 19.7297, lon: -155.0900}, {name: "Fiji", lat: -17.7134, lon: 178.0650}
+        ],
+        // Arid / Hot / Clear
+        arid: [
+            {name: "Dubai, AE", lat: 25.2048, lon: 55.2708}, {name: "Cairo, EG", lat: 30.0444, lon: 31.2357},
+            {name: "Riyadh, SA", lat: 24.7136, lon: 46.6753}, {name: "Death Valley, US", lat: 36.5323, lon: -116.9325},
+            {name: "Alice Springs, AU", lat: -23.6980, lon: 133.8807}, {name: "Phoenix, US", lat: 33.4484, lon: -112.0740},
+            {name: "Timbuktu, ML", lat: 16.7666, lon: -3.0026}, {name: "Las Vegas, US", lat: 36.1699, lon: -115.1398},
+            {name: "Kuwait City, KW", lat: 29.3759, lon: 47.9774}, {name: "Baghdad, IQ", lat: 33.3152, lon: 44.3661}
+        ],
+        // Variable / Temperate / Urban
+        urban: [
+            {name: "London, UK", lat: 51.5074, lon: -0.1278}, {name: "New York, US", lat: 40.7128, lon: -74.0060},
+            {name: "Tokyo, JP", lat: 35.6762, lon: 139.6503}, {name: "Paris, FR", lat: 48.8566, lon: 2.3522},
+            {name: "Sydney, AU", lat: -33.8688, lon: 151.2093}, {name: "Cape Town, ZA", lat: -33.9249, lon: 18.4241},
+            {name: "Moscow, RU", lat: 55.7558, lon: 37.6173}, {name: "Istanbul, TR", lat: 41.0082, lon: 28.9784},
+            {name: "Wellington, NZ", lat: -41.2866, lon: 174.7756}, {name: "Seattle, US", lat: 47.6062, lon: -122.3321}
+        ]
+    };
 
     // --- UI ELEMENTS ---
     const el = id => document.getElementById(id);
@@ -619,6 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
         exploreModal: el('explore-modal'), closeExplore: el('close-explore'), 
         exploreContent: el('explore-content'), exploreLoading: el('explore-loading'),
         exploreTitle: el('explore-title'), exploreSubtitle: el('explore-subtitle'),
+        rescanBtn: el('rescan-btn'), // NEW RESCAN BTN
         // Main Data
         city: el('city-name'), desc: el('weather-desc'), temp: el('temp-val'), feels: el('feels-val'),
         tempMax: el('temp-max'), tempMin: el('temp-min'), time: el('local-time'), date: el('local-date'), bgIcon: el('bg-icon'),
@@ -640,18 +706,55 @@ document.addEventListener('DOMContentLoaded', () => {
         // Visuals
         sky: el('sky-gradient'), starCanvas: el('star-canvas'), aurora: el('aurora-layer'), celestial: el('celestial-container'),
         cloudsBack: el('cloud-layer-back'), cloudsFront: el('cloud-layer-front'), mist: el('mist-layer'),
-        precipCanvas: el('precip-canvas'), lightning: el('lightning')
+        precipCanvas: el('precip-canvas'), lightning: el('lightning'),
+        // Chronosphere
+        timeSlider: el('time-slider'), chronoLabel: el('chrono-label'), simBadge: el('sim-badge')
     };
 
     // Initialize UI based on persistent state
     if(!STATE.metric) { ui.unitPill.style.transform='translateX(100%)'; ui.btnC.style.color='#6b7280'; ui.btnF.style.color='#fff'; }
 
+    // --- CHRONOSPHERE LOGIC ---
+    ui.timeSlider.addEventListener('input', (e) => {
+        STATE.timeOffset = parseInt(e.target.value);
+        
+        // Update Label
+        if (STATE.timeOffset === 0) {
+            ui.chronoLabel.textContent = "Live Feed";
+            ui.chronoLabel.className = "text-xs font-bold tracking-widest uppercase text-cyan-400 mb-1";
+            ui.simBadge.classList.add('hidden');
+            document.body.classList.remove('simulation-active');
+        } else {
+            const futureTime = new Date(Date.now() + STATE.timeOffset * 60 * 60 * 1000);
+            ui.chronoLabel.textContent = `Simulating: +${STATE.timeOffset}h (${futureTime.getHours()}:00)`;
+            ui.chronoLabel.className = "text-xs font-bold tracking-widest uppercase text-purple-400 mb-1 animate-pulse";
+            ui.simBadge.classList.remove('hidden');
+            document.body.classList.add('simulation-active');
+        }
+
+        renderUI(); // Re-render everything with new time offset
+    });
+
+
     // --- MODAL LOGIC (GLOBAL & LOCAL) ---
     ui.exploreBtn.onclick = () => {
         ui.exploreTitle.textContent = "Global Sentry";
-        ui.exploreSubtitle.textContent = "Live Planetary Scan";
+        ui.exploreSubtitle.textContent = "Targeted Atmospheric Scan";
         ui.exploreModal.classList.add('open');
         scanGlobalWeather();
+    };
+
+    ui.rescanBtn.onclick = () => {
+        // Simple animation feedback
+        ui.rescanBtn.firstElementChild.classList.add('animate-spin');
+        setTimeout(() => ui.rescanBtn.firstElementChild.classList.remove('animate-spin'), 1000);
+        
+        if(ui.exploreTitle.textContent.includes("Global")) {
+            scanGlobalWeather();
+        } else {
+            // Re-trigger local scan if that was active
+            ui.localBtn.click();
+        }
     };
     
     ui.localBtn.onclick = () => {
@@ -671,19 +774,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ui.closeExplore.onclick = () => ui.exploreModal.classList.remove('open');
 
-    // GLOBAL SCAN
+    // SMART SAMPLING SCAN (UPDATED)
     async function scanGlobalWeather() {
         ui.exploreLoading.classList.remove('hidden');
-        ui.exploreLoading.innerHTML = '<div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div><p class="text-sm text-gray-400 font-mono animate-pulse">Scanning Global Sectors...</p>';
+        ui.exploreLoading.innerHTML = '<div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div><p class="text-sm text-gray-400 font-mono animate-pulse">Scanning Climate Sectors...</p>';
         ui.exploreContent.classList.add('hidden');
         ui.exploreContent.innerHTML = '';
 
+        // Helper to pick N random items from an array
+        const pickRandom = (arr, n) => [...arr].sort(() => 0.5 - Math.random()).slice(0, n);
+
         try {
-            const promises = EXPLORE_CITIES.map(city => 
-                fetch(`${CONFIG.weather}?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code,is_day&timezone=auto`)
-                .then(r => r.json())
-                .then(data => ({ ...city, ...data.current }))
-            );
+            // Pick 4 from EACH climate zone to guarantee diversity
+            const selection = [
+                ...pickRandom(CLIMATE_ZONES.cryo, 4),
+                ...pickRandom(CLIMATE_ZONES.tropical, 4),
+                ...pickRandom(CLIMATE_ZONES.arid, 4),
+                ...pickRandom(CLIMATE_ZONES.urban, 4)
+            ];
+
+            const promises = selection.map(city => {
+                // Jitter: Random offset between -1.5 and +1.5 degrees (approx 150km radius)
+                // This creates a "Search" effect around the known climate hub
+                const lat = city.lat + (Math.random() - 0.5) * 3; 
+                const lon = city.lon + (Math.random() - 0.5) * 3;
+                
+                return fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&timezone=auto`)
+                    .then(r => r.json())
+                    .then(data => ({ 
+                        ...city, 
+                        name: `${city.name}`, // Use original name but updated data
+                        lat: lat, // Update lat for the click handler
+                        lon: lon, // Update lon
+                        ...data.current 
+                    }))
+            });
             const results = await Promise.all(promises);
             renderExploreGrid(results);
         } catch(e) { console.error(e); }
@@ -1043,9 +1168,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchWeather(lat, lon, name) {
         toggleSkeleton(true);
+        // Reset slider on new fetch
+        ui.timeSlider.value = 0;
+        STATE.timeOffset = 0;
+        
+        ui.simBadge.classList.add('hidden');
+        document.body.classList.remove('simulation-active');
+        ui.chronoLabel.textContent = "Live Feed";
+
         try {
+            // UPDATED FETCH URL: Added 'is_day', 'wind_speed_10m', 'relative_humidity_2m' to hourly for simulation
             const [w, a] = await Promise.all([
-                fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
+                fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,is_day,wind_speed_10m,wind_direction_10m,relative_humidity_2m,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
                 fetch(`${CONFIG.aqi}?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,nitrogen_dioxide,ozone`).then(r=>r.json())
             ]);
             STATE.data = { ...w, aqi: a.current, cityName: name, lat, lon, timestamp: Date.now() }; 
@@ -1058,11 +1192,58 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(e) { console.error(e); ui.city.textContent = "Error"; setStatus('update'); }
     }
 
+    // New helper to get the data frame (Current vs Simulated)
+    function getRenderData() {
+        if (!STATE.data) return null;
+        if (STATE.timeOffset === 0) return STATE.data.current;
+
+        // Simulation Mode
+        const nowIndex = new Date().getHours(); 
+        
+        // Find current hour index
+        const now = new Date();
+        const targetTime = new Date(now.getTime() + STATE.timeOffset * 3600000);
+        
+        // Find index in STATE.data.hourly.time
+        let targetIndex = 0;
+        let minDiff = Infinity;
+        
+        STATE.data.hourly.time.forEach((t, i) => {
+             const diff = Math.abs(new Date(t).getTime() - targetTime.getTime());
+             if (diff < minDiff) {
+                 minDiff = diff;
+                 targetIndex = i;
+             }
+        });
+
+        const h = STATE.data.hourly;
+        
+        // Construct a synthetic "current" object from hourly data
+        return {
+            temperature_2m: h.temperature_2m[targetIndex],
+            relative_humidity_2m: h.relative_humidity_2m[targetIndex] || STATE.data.current.relative_humidity_2m,
+            apparent_temperature: h.temperature_2m[targetIndex], // Approx
+            is_day: h.is_day[targetIndex],
+            precipitation: h.precipitation_probability[targetIndex] > 30 ? 1 : 0, // Approx logic
+            weather_code: h.weather_code[targetIndex],
+            wind_speed_10m: h.wind_speed_10m[targetIndex] || STATE.data.current.wind_speed_10m,
+            wind_direction_10m: h.wind_direction_10m[targetIndex] || STATE.data.current.wind_direction_10m,
+            wind_gusts_10m: STATE.data.current.wind_gusts_10m, // Hourly doesn't always have gusts in basic query
+            surface_pressure: STATE.data.current.surface_pressure,
+            visibility: h.visibility ? h.visibility[targetIndex] : STATE.data.current.visibility,
+            uv_index: STATE.data.current.uv_index, // Keep current for simplicity or approximate
+            
+            // Add property to indicate this is simulated
+            _isSimulated: true,
+            _targetTime: targetTime
+        };
+    }
+
     function renderUI() {
         const d = STATE.data;
         if (!d) return;
 
-        const cur = d.current;
+        const cur = getRenderData(); // USE THE SIMULATED DATA
         const isDay = cur.is_day === 1;
         
         // Moon Phase (Always update widget)
@@ -1086,14 +1267,36 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.tempMax.textContent = Math.round(mx)+'°'; ui.tempMin.textContent = Math.round(mn)+'°';
         document.title = `${d.cityName} • ${Math.round(t)}° | Aether`;
 
-        // Clock
+        // Clock - Updated to handle Simulation Time
         if(STATE.timer) clearInterval(STATE.timer);
-        const tick = () => {
-            const now = new Date();
-            ui.time.textContent = now.toLocaleTimeString('en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit',hour12:false});
-            ui.date.textContent = now.toLocaleDateString('en-US',{timeZone:d.timezone,weekday:'short',month:'short',day:'numeric'});
-            updateSolarTracker(d.daily.sunrise[0], d.daily.sunset[0], d.timezone);
-        }; tick(); STATE.timer = setInterval(tick,1000);
+        
+        const updateClockVisuals = () => {
+             // If simulated, use target time. If live, use real time.
+             const baseTime = (cur._isSimulated && cur._targetTime) ? cur._targetTime : new Date();
+             
+             ui.time.textContent = baseTime.toLocaleTimeString('en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit',hour12:false});
+             
+             // For solar tracker, we pass the simulation time
+             updateSolarTracker(d.daily.sunrise[0], d.daily.sunset[0], d.timezone, baseTime);
+        };
+        
+        if (cur._isSimulated) {
+            updateClockVisuals(); // Just update once
+            if(cur._targetTime) {
+                ui.date.textContent = cur._targetTime.toLocaleDateString('en-US',{timeZone:d.timezone,weekday:'short',month:'short',day:'numeric'});
+            }
+        } else {
+            // Live clock
+            const tick = () => {
+                const now = new Date();
+                ui.time.textContent = now.toLocaleTimeString('en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit',hour12:false});
+                ui.date.textContent = now.toLocaleDateString('en-US',{timeZone:d.timezone,weekday:'short',month:'short',day:'numeric'});
+                updateSolarTracker(d.daily.sunrise[0], d.daily.sunset[0], d.timezone, now);
+            }; 
+            tick(); 
+            STATE.timer = setInterval(tick,1000);
+        }
+
 
         // GEAR ADVISOR LOGIC
         let gear = "Standard kit. Conditions normal.";
@@ -1190,9 +1393,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // SOLAR TRACKER LOGIC
-    function updateSolarTracker(sunriseStr, sunsetStr, timezone) {
+    function updateSolarTracker(sunriseStr, sunsetStr, timezone, customTimeDate) {
         // Convert API ISO strings to Date objects relative to current day
-        const now = new Date();
+        const now = customTimeDate || new Date();
         const sunrise = new Date(sunriseStr);
         const sunset = new Date(sunsetStr);
         
@@ -1219,31 +1422,20 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.markerMoon.classList.remove('opacity-0');
             
             // Simplified night tracking for visual loop (not astronomically perfect but visually consistent)
-            // Maps night duration to 0-1 range
             const prevSunset = setTime - 86400000; 
             const nextSunrise = riseTime + 86400000; 
             
             if(nowTime > setTime) {
                 // Evening until midnight
-                 pct = (nowTime - setTime) / (nextSunrise - setTime); // 0 to 0.5 roughly
+                 pct = (nowTime - setTime) / (nextSunrise - setTime); 
             } else {
                 // Midnight until sunrise
-                 pct = (nowTime - (riseTime - 43200000)) / 43200000; // rough estimation
+                 pct = (nowTime - (riseTime - 43200000)) / 43200000; 
             }
         }
 
         // Clamp 0-1
         pct = Math.max(0, Math.min(1, pct));
-        
-        // Map 0-1 to X/Y coordinates on a 200x100 SVG
-        // Path: M 10 90 A 90 90 0 0 1 190 90
-        // Center is (100, 90), Radius 90.
-        // Angle goes from 180 (PI) at rise to 360/0 (0) at set? 
-        // Arc command uses clockwise.
-        // Let's use simple trigonometry for placement
-        // Angle: Start at PI (180 deg, left), End at 0 (0 deg, right).
-        // Actually for the arc A 90 90, we want to traverse from 180 degrees to 0 degrees (counter-clockwise visual, but SVG coord system y is down)
-        // Correct angle: Rise = 180 deg, Set = 0 deg.
         
         const angle = Math.PI - (pct * Math.PI); // PI -> 0
         const r = 90;
@@ -1271,6 +1463,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const avg = sumTemp / 24; const isHot = STATE.metric ? avg > 25 : avg > 77;
         const color = isHot ? '#f97316' : '#22d3ee';
+        
         STATE.chart = new Chart(ctx, {
             type: 'line',
             data: { labels, datasets: [
@@ -1310,10 +1503,50 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return label;
                             }
                         }
+                    },
+                    // SIMULATION LINE
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                xMin: STATE.timeOffset, // Match slider value
+                                xMax: STATE.timeOffset,
+                                borderColor: 'white',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    content: 'NOW',
+                                    display: true,
+                                    position: 'start'
+                                }
+                            }
+                        }
                     }
                 }, 
                 scales:{x:{display:false}, y:{display:false}, y1:{display:false, min:0, max:100}} 
-            }
+            },
+            plugins: [{
+                // Custom plugin to draw the vertical line based on state offset
+                id: 'simLine',
+                afterDraw: (chart) => {
+                    if (STATE.timeOffset > 0) {
+                        const ctx = chart.ctx;
+                        const xAxis = chart.scales.x;
+                        const yAxis = chart.scales.y;
+                        const x = xAxis.getPixelForValue(STATE.timeOffset);
+                        
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(x, yAxis.top);
+                        ctx.lineTo(x, yAxis.bottom);
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#a855f7'; // Purple line for simulation
+                        ctx.setLineDash([5, 5]);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }]
         });
     }
 
