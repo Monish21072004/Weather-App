@@ -1,6 +1,6 @@
-![Version](https://img.shields.io/badge/Aether%20V4-Chronosphere-06b6d4?style=for-the-badge&logo=weather&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+[![Version](https://img.shields.io/badge/Aether%20V4-Chronosphere-06b6d4?style=for-the-badge&logo=weather&logoColor=white)](https://monish21072004.github.io/Weather-App/)
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)](https://github.com/monish21072004/Weather-App/commits/main)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://github.com/monish21072004/Weather-App/blob/main/LICENSE)
 
 # 🌐 **Aether Weather – Version 4.0 (Chronosphere)**
 
