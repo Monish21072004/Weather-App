@@ -1,192 +1,274 @@
-# 🌐 **Aether Weather – Version 3.0**
+# 🌐 **Aether Weather – Version 4.0 (Chronosphere)**
 
-### *Next-Generation Atmospheric Intelligence Platform*
+### *Cinematic Atmospheric Intelligence Platform – Rebuilt for 2025*
 
-Live Demo: **[https://monish21072004.github.io/Weather-App/](https://monish21072004.github.io/Weather-App/)**
+**Live Demo:**
+👉 **[https://monish21072004.github.io/Weather-App/](https://monish21072004.github.io/Weather-App/)**
 
-Aether Weather V3 is a **complete redesign and overhaul** of the previous Weather App.
-Now powered by a cinematic **atmospheric rendering engine**, real-time environmental physics, global scanning, AI insights, lightning simulation, celestial calculations, and a fully rebuilt UI, Aether V3 provides one of the most immersive weather visualizations on the web.
+Aether V4 — **Chronosphere** — is the most advanced release of the Aether Weather Engine yet.
+Rewritten, restructured, and redesigned, V4 introduces a *hyper-realistic atmospheric rendering system*, dual-mode global scanning, simulation scrubbing, improved AI insights, advanced celestial mechanics, a new tactical UI, and the first-ever **Map-Integrated Global Sentry**.
+
+This is not just a weather app —
+**It’s a full environmental intelligence system.**
 
 ---
 
-## ✨ **Aether V3 – Major Release Highlights**
+# ✨ **What’s New in Aether V4 – Chronosphere**
 
-> The biggest update since the project launched — rebuilt from the ground up with a new atmospheric engine, new UI, new physics, and global scanning capabilities.
+> A complete re-architecture of Aether V3 with new physics, new visual layers, new global systems, and a simulation engine.
 
-* ⚡ Storm Engine 2.0 with real lightning
-* 🌍 Global Sentry – live world weather scanning
-* 📡 Local Sector Scan – micro-climate tracking
-* 🌌 Starfield renderer with nighttime mode
-* 🌈 Dynamic aurora & atmospheric layers
-* 🌙 Moon Phase engine with realistic shading
-* 🌅 Solar Arc tracking system
-* ☁️ Multi-layer drifting clouds
-* 🌫️ Fog & mist simulation
-* 🎨 Glass UI V3 + neon accents
-* 📊 Upgraded forecast chart
-* 🧠 Improved tactical insight system
+### 🌐 **Chronosphere Time Scrubber (NEW)**
+
+A real-time × future-time simulation engine:
+
+* Scrub from **0 → 24 hours ahead**
+* All visuals, physics & metrics adapt dynamically
+* Live ↔ Simulation auto indicators
+* Atmosphere recalculated each frame
+
+### 🗺️ **Global Sentry — MAP MODE (NEW)**
+
+Aether V4 includes a true **geospatial weather scanner**:
+
+* Leaflet-powered dark world map
+* Dynamic weather markers with icons
+* Sector-based categorization
+* “Analyze Sector” instant-load button
+* Auto-fit marker bounds
+* Continuous scanning support
+
+### 📡 **Enhanced Global Scan Engine**
+
+Now powered by:
+
+* 4 major climate zones
+* 16 sampled global sectors per scan
+* Randomized micro-offsets (~150km) for natural sampling
+* Category clustering: Clear / Cloudy / Rain / Snow / Storm
+* Seamless switch between Grid ↔ Map views
+
+### 📍 **Local Sector Scan V2**
+
+GPS-based micro-atmosphere sampling:
+
+* 8-direction radial scan
+* ~15–20 km spread
+* Sector-by-sector microclimate comparison
+* Fully rebuilt cards + map compatibility
+
+### 🌤️ **Aether Atmospheric Engine V4**
+
+Cinematic environment renderer:
+
+* Faster, smoother sky transitions
+* Higher-fidelity aurora rendering
+* Realistic cloud parallax
+* Storm-density cloud control
+* Mist enhancement w/ height-based gradients
+* Improved night-sky + starfield stability
+
+### ⚡ **Storm Engine 3.0**
+
+You upgraded from V2 to V3:
+
+* More accurate lightning triggers
+* Multi-branch fractal paths
+* Discharge-based brightness scaling
+* Storm severity integration
+* Safer performance at high rain loads
+
+### 🌙 **Celestial System V2**
+
+Completely new:
+
+* Moon SVG renderer rewritten
+* More accurate synodic calculations
+* Sun/Moon arc tracking
+* Dynamic sun/moon swap
+* Realistic glow falloff
+
+### 🧠 **Insight Assistant V3**
+
+Now with:
+
+* Gear recommendation engine
+* New tags + contextual analysis
+* Improved brief/health/activity segmentation
+* UV, AQI & pollutant display upgrades
+* Faster response to unit changes & forecasts
+
+### 🎛️ **UI / UX Enhancements**
+
+Aether V4 introduces:
+
+* Glass UI V4 (sharper, cleaner, more modern)
+* Adaptive neon accents
+* Faster skeleton loading
+* Rebalanced grids for desktop + mobile
+* Upgraded chip bar, alerts, status indicators
 
 ---
 
 # 🚀 **Features**
 
-## 🌦️ **Accurate Real-Time Weather**
+## 🌦️ **Real-Time Weather Metrics**
 
-* Temperature & feels-like
+* Temperature + feels-like
+* Wind speed, gusts, direction (compass rotated)
 * Humidity, dew point, visibility
-* Rain, snow, storms
-* Wind speed, gusts, and direction
-* Day/Night auto mode
-* UV index + Air Quality
+* Pressure
+* Weather codes (rain, snow, storms, fog)
+* AQI + pollutants (PM2.5, NO2, O3)
+* UV index
 * Severe weather alerts
 
 ---
 
-## 🎨 **Aether Visual Engine V3**
+## 🎨 **Aether Visual Engine V4**
 
-A fully rewritten atmospheric engine that generates real-time visuals:
+Hyper-realistic atmospheric simulation.
 
-### Sky Rendering
+### Sky & Light
 
-* Smooth adaptive gradients
-* Aurora simulation
-* Fog & mist layers
-* Night sky starfield
-* Weather-reactive colors
+* Dynamic gradient sky
+* Aurora blobs (animated)
+* Smooth transitions
+* Day/night auto-morphing
+* Reactive lighting (storm, fog, night)
 
 ### Particle Physics
 
-* Wind-drift rain streaks
-* Snow drift with natural wobble
-* Intensity scales with actual precipitation data
+* Wind-reactive precipitation
+* Rain streaks w/ velocity vectors
+* Snow drift wobbling
+* Lightning-based flash overlays
 
-### Cloud Layers
+### Cloud Engine
 
-* Front and back drifting clouds
-* Overcast density control
-* Storm cloud rendering
-
----
-
-## ⚡ **Storm Engine 2.0**
-
-True dynamic storms:
-
-* Procedural **lightning bolts**
-* **Sheet lightning** flash effect
-* Multi-segment fractal paths
-* Thunderstorm ambience
-* Storm-intense precipitation
-* API-driven severity scaling
+* Dual-layer drifting clouds
+* Density control
+* Fog/mist floor layers
+* Storm clouds + turbulence visuals
 
 ---
 
-## 🌙 **Celestial System**
+## ⚡ **Storm Engine 3.0**
 
-* Dynamic **Sun/Moon rendering**
-* Phase-accurate **Moon shading**
-* Lunar/solar glow processing
-* Weather-driven celestial visibility
-* SVG-rendered accuracy
+* Real lightning bolts (multi-branch)
+* Sheet lightning
+* Impact-based flash spread
+* Storm severity scaling
+* Lightning event scheduler
+
+---
+
+## 🌙 **Celestial Engine**
+
+* High-accuracy lunar phase calculation
+* SVG-rendered moon
+* Sun/Moon position arc
+* Solar path visualization
+* Night glow & shadow curves
 
 ---
 
 ## 🌅 **Solar Arc Tracker**
 
-Beautiful animated arc showing:
-
-* Sun path
-* Sunrise & sunset
-* Day progress indicator
-* Auto-switch to moon at night
+* Semi-circular sun path
+* Sunrise & sunset times
+* Marker transitions sun ↔ moon
+* Smooth positional animation
 
 ---
 
-## 🧠 **Tactical Insight Assistant V2**
+## 🧠 **Tactical Insight Assistant V3**
 
-Smart advice for users:
-
-* Condition summary
-* Personal comfort index
-* Health tab (UV, AQI, pollutants)
-* Activity tab (outdoor, running, driving)
-* Gear recommendations
-* Atmospheric tags
+* Weather summary
+* Comfort index
+* Outfit / gear recommendations
+* UV/AQI health indicators
+* Outdoor/Running/Driving suitability
+* Intelligent atmospheric tags
 
 ---
 
-## 🌍 **Global Sentry**
+## 🌍 **Global Sentry (Map + Grid)**
 
-A world-scale weather scanner:
+Massive V4 upgrade:
 
-* 50+ global stations
-* Categorizes zones into:
+### Grid View
 
-  * Clear
-  * Cloudy
-  * Rain
-  * Snow
-  * Storm
-* Click any zone to load instantly
+* 4 climate zones × random micro-samples
+* Automatic weather clustering
+* Live temperature & code mapping
+* Instant tap-to-load
 
----
+### Map View
 
-## 📡 **Local Sector Scan**
-
-Uses GPS to scan weather within a **20km radius**:
-
-* 8 radial sectors around your position
-* Shows micro-climate variation
-* Great for hyperlocal storm tracking
+* Leaflet-powered world map
+* Weather-coded markers
+* Sector popups
+* Analyze button
+* Intelligent recentering
 
 ---
 
-## 📊 **24-Hour Forecast Chart**
+## 📡 **Local Sector Scan V2**
 
-* Smooth curved line chart
-* Auto-updates on unit switch
-* Responsive for all layouts
+* 8 radial sectors around user location
+* Microclimate-level accuracy
+* Temperature + code for each sector
+* Grid + Map rendering
+
+---
+
+## 📊 **24-Hour Forecast (Upgraded)**
+
+* New smoother chart scaling
+* Auto-updates with unit toggle
+* Optimized for variable screen widths
 
 ---
 
 ## 📅 **7-Day Projection**
 
-* Minimalist glass list view
-* Icons, descriptions
-* Max/Min temperature
-* Daily weather trend
+* Minimalist forecast list
+* High-quality icons
+* Temperature trend
+* Detailed weather codes
 
 ---
 
 ## ⭐ **Favorites System**
 
-* Save unlimited cities
-* Neon-style favorite chips
-* Instant city switching
-* Persistent storage
+* Persistent city list
+* Neon-tag chips
+* Instant switching
+* Faster loading with prefetch
 
 ---
 
 ## 🗺️ **Live Radar**
 
-* Windy.com rain radar
-* Auto-centers based on search
-* Smooth opacity transitions
+* Embedded Windy.com radar
+* Auto-updates location
+* Hover fade → Full brightness on hover
 
 ---
 
 # 🛠️ **Tech Stack**
 
-| Technology           | Purpose                     |
-| -------------------- | --------------------------- |
-| **HTML, JavaScript** | Core logic + rendering      |
-| **TailwindCSS**      | UI, Layout, Glassmorphism   |
-| **Chart.js**         | 24-hour temperature graph   |
-| **Open-Meteo APIs**  | Weather, AQI, Geocoding     |
-| **Canvas API**       | Particles, stars, lightning |
-| **SVG Rendering**    | Sun, moon, solar arc        |
-| **LocalStorage**     | Caching + favorites         |
-| **Material Symbols** | Vector icons                |
+| Tech                 | Purpose                         |
+| -------------------- | ------------------------------- |
+| **HTML, JavaScript** | Core logic, rendering engine    |
+| **TailwindCSS**      | Glass UI V4, layout             |
+| **Chart.js**         | Forecast chart                  |
+| **Leaflet.js**       | Global Sentry Map               |
+| **Open-Meteo APIs**  | Weather, AQI, geocoding         |
+| **Canvas API**       | Stars, precipitation, lightning |
+| **SVG Rendering**    | Moon, solar arc, icons          |
+| **LocalStorage**     | Favs, units, caching            |
+| **Material Symbols** | Icons                           |
 
 ---
 
@@ -194,42 +276,38 @@ Uses GPS to scan weather within a **20km radius**:
 
 ```
 Weather-App/
-│── index.html        # Main Aether V3 Engine (UI + Logic)
-│── README.md         # Documentation
+│── index.html    # Aether V4: Chronosphere Engine
+│── README.md     # Documentation
+│── LICENSE       # MIT License
 ```
 
 ---
 
 # ⚙️ **How It Works**
 
-### 1️⃣ Weather → Rendering Pipeline
+### 1️⃣ Weather → Environment Engine
 
-Weather codes dynamically control:
+All environmental layers (sky, clouds, fog, sun, moon, precipitation, lightning) dynamically react to:
 
-* Sky
-* Clouds
-* Stars
-* Fog
-* Precipitation
-* Lightning
-* Favicon
-* UI gradients
+* Weather code
+* Time
+* Temperature
+* Wind
+* AQI
+* Simulation offset (Chronosphere)
 
-### 2️⃣ Precipitation Simulation
+### 2️⃣ Global Climate Sampling
 
-Rain & snow physics scale based on:
+Smart multi-zone sampling + jitter offset for natural variation.
 
-* Real precipitation value
-* Wind speed
-* Storm severity
+### 3️⃣ Celestial Calculations
 
-### 3️⃣ Global Scanning
+Lunar phase derived via synodic cycle mathematics.
+Solar path generated using geometric arc mapping.
 
-Parallel API requests → grouped → rendered into cards.
+### 4️⃣ Map Rendering
 
-### 4️⃣ Celestial Position Calculation
-
-Moon phase generated using synodic cycle formulas.
+Leaflet map auto-manages marker clustering & viewport fitting.
 
 ---
 
@@ -247,57 +325,65 @@ No server required.
 
 # 🚀 **Deploy via GitHub Pages**
 
-1. Go to **Settings → Pages**
+1. Open **Settings → Pages**
 2. Select **main** branch
 3. Select **root**
 4. Save
-5. Your app is live 🚀
+5. Done 🎉
 
 ---
 
 # 📘 **Changelog**
 
-## **[3.0.0] – Major Aether Update**
+## **[4.0.0] – Aether V4: Chronosphere**
 
 ### Added
 
-* Aether Visual Engine V3
-* Storm Engine 2.0 (bolts + sheet lightning)
-* Global Sentry Scanner
-* Local Sector Scan
-* Moon Phase Engine
-* Solar Arc Tracker
-* Cloud Layers V3
-* Fog & Mist Simulation
-* Aurora Layer
-* New 7-day projection
-* New Insight Assistant
-* New metrics (gusts, pollutants, etc.)
-* Precipitation physics overhaul
+* Chronosphere 24h Simulation Engine
+* Global Sentry Map Mode
+* Climate Zone Smart Scan
+* Improved Global Grid View
+* Local Sector Scan V2
+* Enhanced Celestial Engine (Moon + Solar Arc)
+* Storm Engine 3.0
+* Full Atmospheric Engine Rewrite
+* New Insight Assistant v3
+* Gear Recommendation System
+* New UI: Glass V4
+* Lightning System Upgrades
+* New fog/aurora/cloud layers
+* Better favorites bar
+* Rebuilt radar component
 
 ### Changed
 
-* Fully redesigned UI
-* Improved chart responsiveness
-* Faster API calls with parallel fetching
-* Better unit switching system
+* Massive UI/UX redesign
+* Smoothed chart & layout behavior
+* Better performance & caching
+* Faster search + GPS handling
+* Improved loading skeletons
+* More accurate night mode
 
 ### Removed
 
-* Old animations
-* Old UI components
-* Deprecated AQI logic
-* Legacy graph implementations
+* Legacy global scan
+* Old celestial visuals
+* Old Insight Assistant V2
+* Older storm model
+* Deprecated code structure
 
 ---
 
 # 🤝 **Contributing**
 
-Ideas and contributions are welcome!
-Feel free to open issues or submit pull requests.
+Suggestions and contributions are welcome!
+Feel free to open issues or submit PRs.
 
 ---
 
-## 📜 **License**
-Licensed under the [MIT License](https://github.com/monish21072004/Weather-App/blob/main/LICENSE).
+# 📜 **License**
 
+Licensed under the **MIT License**.
+**[View License](./LICENSE)**
+
+---
