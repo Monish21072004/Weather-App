@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
-    <title>Aether Station V4: Chronosphere</title>
+    <title>Aether Station V5: Sentry</title>
     <link rel="icon" type="image/png" href="https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/sunny/default/24px.svg" id="dynamic-favicon">
     
     <!-- Libraries -->
@@ -21,7 +21,7 @@
 
     <style>
         :root {
-            --glass-surface: rgba(10, 14, 24, 0.7);
+            --glass-surface: rgba(10, 14, 24, 0.85);
             --glass-border: rgba(255, 255, 255, 0.08);
             --glass-shine: rgba(255, 255, 255, 0.03);
             --accent-cyan: #06b6d4;
@@ -47,7 +47,7 @@
         #sky-gradient {
             position: fixed; inset: 0; z-index: -50;
             background: linear-gradient(to bottom, #0f172a, #020617);
-            transition: background 1s ease; /* Faster transition for scrubbing */
+            transition: background 1s ease;
         }
 
         #star-canvas {
@@ -154,9 +154,9 @@
         /* Explore Modal */
         #explore-modal {
             position: fixed; inset: 0; z-index: 200;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
+            background: rgba(0,0,0,0.95); backdrop-filter: blur(30px);
             opacity: 0; pointer-events: none; transition: opacity 0.3s;
-            display: flex; align-items: center; justify-content: center; padding: 20px;
+            display: flex; flex-direction: column;
         }
         #explore-modal.open { opacity: 1; pointer-events: auto; }
         
@@ -248,6 +248,24 @@
         .leaflet-popup-close-button {
             color: #cbd5e1 !important;
         }
+
+        /* --- COSMIC PULSE ANIMATION --- */
+        .iss-dot {
+            width: 8px; height: 8px; background: #ef4444; border-radius: 50%;
+            box-shadow: 0 0 10px #ef4444; animation: pingRed 1.5s infinite;
+        }
+        @keyframes pingRed { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+        
+        .history-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 12px;
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);
+            color: #94a3b8; margin-top: 4px;
+        }
+        .history-badge.warmer { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
+        .history-badge.colder { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-color: rgba(59, 130, 246, 0.3); }
+
     </style>
 </head>
 <body class="selection:bg-cyan-500/30">
@@ -268,15 +286,18 @@
     <canvas id="precip-canvas" width="1468" height="541"></canvas>
     <div id="lightning"></div>
 
-    <!-- EXPLORE MODAL -->
+    <!-- EXPLORE MODAL (Reverted to Icons) -->
     <div id="explore-modal">
-        <div class="w-full max-w-6xl h-[90vh] flex flex-col">
+        <div class="w-full max-w-6xl flex flex-col h-full mx-auto p-6 pt-12 relative">
+            
+            <!-- Header with Controls -->
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h2 class="text-2xl font-bold font-display text-white uppercase tracking-widest" id="explore-title">Global Sentry</h2>
                     <p class="text-sm text-cyan-400 font-mono" id="explore-subtitle">Targeted Atmospheric Scan</p>
                 </div>
-                <!-- Controls Container -->
+                
+                <!-- Icon Controls (Reverted) -->
                 <div class="flex items-center gap-3">
                     <button id="map-btn" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:text-cyan-400 flex items-center justify-center text-gray-300 transition-all shadow-lg group" title="Toggle Map View">
                         <span class="material-symbols-rounded">map</span>
@@ -284,24 +305,23 @@
                     <button id="rescan-btn" class="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/30 hover:border-cyan-400/50 flex items-center justify-center text-cyan-300 transition-all shadow-lg group" title="Rescan">
                         <span class="material-symbols-rounded group-hover:rotate-180 transition-transform duration-500">sync</span>
                     </button>
-                    <button id="close-explore" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+                    <button id="close-explore" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/10">
                         <span class="material-symbols-rounded">close</span>
                     </button>
                 </div>
             </div>
             
+            <!-- Loading State -->
             <div id="explore-loading" class="flex-1 flex flex-col items-center justify-center">
                 <div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div>
                 <p class="text-sm text-gray-400 font-mono animate-pulse" id="explore-loading-text">Triangulating Sectors...</p>
             </div>
 
-            <!-- List View -->
-            <div id="explore-content" class="hidden flex-1 overflow-y-auto custom-scroll grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
+            <!-- Content Views -->
+            <div id="explore-content" class="hidden flex-1 overflow-y-auto custom-scroll grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-4">
                 <!-- Injected Sections -->
             </div>
-
-            <!-- Map View Container -->
-            <div id="explore-map" class="hidden flex-1 rounded-2xl overflow-hidden border border-white/10 relative z-10"></div>
+            <div id="explore-map" class="hidden flex-1 rounded-2xl overflow-hidden border border-white/10 relative z-10 mb-4"></div>
         </div>
     </div>
 
@@ -315,7 +335,7 @@
                     <span class="material-symbols-rounded text-white text-2xl">satellite_alt</span>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold font-display uppercase tracking-widest text-white">Aether <span class="text-cyan-400 text-sm align-top opacity-50">v4</span></h1>
+                    <h1 class="text-xl font-bold font-display uppercase tracking-widest text-white">Aether <span class="text-cyan-400 text-sm align-top opacity-50">v5</span></h1>
                     <div class="flex items-center gap-2">
                         <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" id="status-dot"></span>
                         <span class="text-[10px] text-cyan-200 tracking-[0.2em] uppercase font-mono" id="status-text">Online</span>
@@ -400,10 +420,15 @@
 
                     <div class="flex justify-between items-start z-10">
                         <div>
-                            <div class="flex items-center gap-3 text-cyan-200/80 font-mono text-xs md:text-sm mb-3">
+                            <div class="flex flex-wrap items-center gap-3 text-cyan-200/80 font-mono text-xs md:text-sm mb-3">
                                 <span class="skeleton" id="local-time">--:--</span>
                                 <span class="w-1 h-1 bg-cyan-400 rounded-full"></span>
                                 <span class="skeleton" id="local-date">Loading Date</span>
+                                <!-- CHRONO-LOG BADGE -->
+                                <span id="history-badge" class="history-badge hidden ml-2">
+                                    <span class="material-symbols-rounded text-[10px]">history</span>
+                                    <span id="history-text">--</span>
+                                </span>
                             </div>
                             <h2 class="fluid-h1 font-bold text-white leading-none tracking-tight text-glow skeleton" id="city-name" style="min-width: 200px; display: inline-block;">Loading...</h2>
                             <p class="text-xl text-cyan-100 mt-2 font-medium capitalize opacity-90 skeleton" id="weather-desc" style="max-width: 150px;">Processing...</p>
@@ -553,12 +578,19 @@
 
             <!-- RIGHT COLUMN (Side) -->
             <div class="lg:col-span-4 flex flex-col gap-6">
-                <!-- Moon & Sun Cycle (UPDATED) -->
+                <!-- Moon & Sun Cycle (UPDATED - COSMIC ALIGNMENT) -->
                 <div class="glass p-6 flex flex-col gap-6 relative overflow-hidden">
-                    <!-- Solar Arc Visualizer -->
-                    <div class="relative w-full h-32 flex flex-col items-center justify-end">
-                        <div class="absolute inset-0 flex items-center justify-center text-[10px] text-gray-500 font-mono tracking-widest uppercase mb-6">Solar Tracker</div>
-                        
+                    <!-- Header with Tabs - Moved to Static Header Position -->
+                    <div class="flex justify-between items-center border-b border-white/10 pb-4 z-20 relative">
+                        <div class="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Celestial Tracking</div>
+                        <div class="flex gap-2">
+                            <button class="tab-btn active hover:text-white text-[10px] font-bold uppercase tracking-wider text-gray-500 px-2" data-tab="celestial-tracker">Cycles</button>
+                            <button class="tab-btn hover:text-white text-[10px] font-bold uppercase tracking-wider text-gray-500 px-2" data-tab="cosmic-radar">Space</button>
+                        </div>
+                    </div>
+
+                    <!-- 1. Solar/Lunar Tracker (Default) -->
+                    <div id="celestial-tracker" class="relative w-full h-32 flex flex-col items-center justify-end transition-opacity duration-300">
                         <!-- The Arc -->
                         <div class="relative w-full h-full">
                             <svg viewBox="0 0 200 100" class="w-full h-full overflow-visible">
@@ -573,7 +605,6 @@
                                 </g>
                             </svg>
                         </div>
-
                         <!-- Times -->
                         <div class="absolute bottom-0 w-full flex justify-between text-xs font-bold text-gray-400 px-2">
                             <span id="sunrise-val">--:--</span>
@@ -581,8 +612,52 @@
                         </div>
                     </div>
 
-                    <!-- Moon Phase -->
-                    <div class="flex items-center gap-4 pt-4 border-t border-white/10">
+                    <!-- 2. Cosmic Radar (Hidden by default) -->
+                    <div id="cosmic-radar" class="absolute inset-0 top-12 p-4 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 bg-black/90 z-10 rounded-b-2xl">
+                        <!-- New Info Icon/Tooltip Helper -->
+                         <div class="absolute top-2 right-2 group">
+                             <span class="material-symbols-rounded text-gray-500 text-sm cursor-help hover:text-white transition-colors">help</span>
+                             <div class="absolute right-0 top-6 w-48 bg-black/90 border border-white/20 rounded-lg p-3 text-[10px] text-gray-300 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl backdrop-blur-md">
+                                 Real-time tracking of the International Space Station relative to your GPS coordinates.
+                             </div>
+                         </div>
+
+                        <!-- RADAR VISUALIZATION (UPDATED) -->
+                        <div class="relative w-32 h-32 rounded-full flex items-center justify-center mb-2" style="background: radial-gradient(circle, rgba(6,182,212,0.1) 0%, rgba(0,0,0,0) 70%); border: 1px solid rgba(255,255,255,0.1);">
+                             <!-- Background Map (Wireframe) -->
+                             <div class="absolute inset-0 opacity-20" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' fill=\'none\' stroke=\'white\' stroke-width=\'0.5\'><path d=\'M10,50 Q25,20 50,50 T90,50\'/></svg>'); background-size: cover;"></div>
+
+                             <!-- Crosshairs -->
+                            <div class="absolute w-full h-[1px] bg-white/10"></div>
+                            <div class="absolute h-full w-[1px] bg-white/10"></div>
+                             <!-- Distance Rings -->
+                            <div class="absolute w-20 h-20 border border-white/5 rounded-full"></div>
+                            
+                            <!-- Radar Sweep -->
+                            <div class="absolute inset-0 rounded-full border border-cyan-500/20 animate-[spin_4s_linear_infinite] border-t-cyan-400/80" style="border-top-width: 2px;"></div>
+                            
+                            <!-- Earth Center (YOU) -->
+                            <div class="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6] relative z-10"></div>
+                            
+                            <!-- ISS Dot (Dynamic Position) -->
+                            <div id="iss-marker" class="absolute w-3 h-3 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444] transition-all duration-1000 opacity-0 z-10" style="top: 20%; right: 20%;"></div>
+                        </div>
+
+                        <!-- LEGEND -->
+                        <div class="flex gap-4 text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-3">
+                             <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> YOU</div>
+                             <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> ISS</div>
+                        </div>
+
+                        <div class="text-center">
+                            <div class="text-xs font-mono text-white" id="iss-location">Locating...</div>
+                            <div class="text-[9px] text-gray-600 mt-1" id="iss-distance">-- km away</div>
+                            <div class="text-[9px] text-cyan-400/80 mt-2 font-mono border border-cyan-500/20 px-2 py-1 rounded bg-cyan-900/10">Live Satellite Uplink Active</div>
+                        </div>
+                    </div>
+
+                    <!-- Moon Phase Footer -->
+                    <div class="flex items-center gap-4 pt-4 border-t border-white/10 mt-auto relative z-20">
                         <div class="w-10 h-10 shrink-0" id="moon-ui-container"></div>
                         <div>
                             <div class="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Moon Phase</div>
@@ -635,7 +710,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const CONFIG = {
         weather: 'https://api.open-meteo.com/v1/forecast',
         geo: 'https://geocoding-api.open-meteo.com/v1/search',
-        aqi: 'https://air-quality-api.open-meteo.com/v1/air-quality'
+        aqi: 'https://air-quality-api.open-meteo.com/v1/air-quality',
+        archive: 'https://archive-api.open-meteo.com/v1/archive', // NEW for History
+        iss: 'https://api.wheretheiss.at/v1/satellites/25544' // NEW for Cosmic
     };
     
     // Initialize State with persistent Metric preference & Cache Key
@@ -653,7 +730,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentScanResults: [], // STORE SCAN RESULTS
         map: null, // LEAFLET MAP INSTANCE
         mapMarkers: [], // STORE MARKERS
-        isMapView: false
+        isMapView: false,
+        historyData: null, // NEW: Store history comparison
+        issInterval: null // NEW: Store ISS polling
     };
     
     // Fallback Cities for Random Selection (Startup)
@@ -717,13 +796,14 @@ document.addEventListener('DOMContentLoaded', () => {
         exploreModal: el('explore-modal'), closeExplore: el('close-explore'), 
         exploreContent: el('explore-content'), exploreLoading: el('explore-loading'),
         exploreMap: el('explore-map'), // NEW
-        mapBtn: el('map-btn'), // NEW
+        mapBtn: el('map-btn'), // NEW BUTTON
         exploreTitle: el('explore-title'), exploreSubtitle: el('explore-subtitle'),
         rescanBtn: el('rescan-btn'), // NEW RESCAN BTN
         // Main Data
         city: el('city-name'), desc: el('weather-desc'), temp: el('temp-val'), feels: el('feels-val'),
         tempMax: el('temp-max'), tempMin: el('temp-min'), time: el('local-time'), date: el('local-date'), bgIcon: el('bg-icon'),
         favBtn: el('fav-btn'), favBar: el('fav-bar'),
+        historyBadge: el('history-badge'), historyText: el('history-text'), // NEW: History UI
         // Metrics
         windVal: el('wind-val'), windIcon: el('wind-icon'), windDir: el('wind-dir'), windGusts: el('wind-gusts'),
         humidVal: el('humid-val'), dewVal: el('dew-val'), visVal: el('vis-val'), presVal: el('pres-val'),
@@ -736,6 +816,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Astro & Charts
         sunrise: el('sunrise-val'), sunset: el('sunset-val'), solarMarker: el('solar-marker'), markerSun: el('marker-sun'), markerMoon: el('marker-moon'),
         moonUI: el('moon-ui-container'), moonText: el('moon-text'),
+        issLocation: el('iss-location'), issDistance: el('iss-distance'), issMarker: el('iss-marker'), // NEW: Cosmic UI
         forecast: el('forecast-list'), chartCanvas: el('chart-canvas'), radar: el('radar-frame'),
         alert: el('alert-box'), alertMsg: el('alert-msg'),
         // Visuals
@@ -832,7 +913,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (showMap) {
             ui.exploreContent.classList.add('hidden');
             ui.exploreMap.classList.remove('hidden');
-            ui.mapBtn.classList.add('text-cyan-400', 'bg-white/10');
+            ui.mapBtn.classList.remove('bg-white/5', 'text-gray-300');
+            ui.mapBtn.classList.add('bg-cyan-500/20', 'text-cyan-400', 'border-cyan-500/30');
             
             // Initialize map if not already
             initMap();
@@ -844,7 +926,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             ui.exploreContent.classList.remove('hidden');
             ui.exploreMap.classList.add('hidden');
-            ui.mapBtn.classList.remove('text-cyan-400', 'bg-white/10');
+            ui.mapBtn.classList.add('bg-white/5', 'text-gray-300');
+            ui.mapBtn.classList.remove('bg-cyan-500/20', 'text-cyan-400', 'border-cyan-500/30');
         }
     }
 
@@ -1337,12 +1420,101 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
             STATE.data = { ...w, aqi: a.current, cityName: name, lat, lon, timestamp: Date.now() }; 
             
+            // FETCH NEW MODULES
+            fetchHistory(lat, lon, w.timezone); // Trigger Chrono-Log
+            fetchISS(lat, lon); // Trigger Cosmic Radar
+
             // SAVE TO CACHE
             localStorage.setItem(CACHE_KEY, JSON.stringify(STATE.data));
             
             // Simulate minimal network delay for skeleton effect demonstration
             setTimeout(() => { renderUI(); toggleSkeleton(false); }, 600);
         } catch(e) { console.error(e); ui.city.textContent = "Error"; setStatus('update'); }
+    }
+
+    // --- NEW FEATURE 1: CHRONO-LOG (History) ---
+    async function fetchHistory(lat, lon, timezone) {
+        ui.historyBadge.classList.add('hidden'); // Reset state
+        
+        // Calculate "Today Last Year"
+        const today = new Date();
+        const lastYear = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+        const dateStr = lastYear.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        try {
+            const url = `${CONFIG.archive}?latitude=${lat}&longitude=${lon}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_mean&timezone=${timezone}`;
+            const res = await fetch(url).then(r => r.json());
+            
+            if (res.daily && res.daily.temperature_2m_mean && res.daily.temperature_2m_mean.length > 0) {
+                const histTemp = res.daily.temperature_2m_mean[0];
+                STATE.historyData = { date: dateStr, temp: histTemp };
+                updateHistoryUI();
+            }
+        } catch (e) { console.log("History Fetch Failed", e); }
+    }
+
+    function updateHistoryUI() {
+        if (!STATE.historyData || !STATE.data) return;
+        
+        const currentTemp = STATE.data.current.temperature_2m;
+        const histTemp = STATE.historyData.temp;
+        const diff = currentTemp - histTemp;
+        
+        let diffVal = Math.abs(Math.round(diff));
+        if (!STATE.metric) diffVal = Math.round(diffVal * 1.8); // Convert delta F
+        
+        if (Math.abs(diff) < 1) {
+            // Ignore minor changes
+            return; 
+        }
+
+        ui.historyText.textContent = `${diff > 0 ? 'Warmer' : 'Colder'} than last year (+${diffVal}°)`;
+        ui.historyBadge.className = `history-badge ${diff > 0 ? 'warmer' : 'colder'} ml-2 animate-pulse`;
+        ui.historyBadge.classList.remove('hidden');
+    }
+
+    // --- NEW FEATURE 2: COSMIC RADAR (ISS) ---
+    function fetchISS(userLat, userLon) {
+        if (STATE.issInterval) clearInterval(STATE.issInterval);
+        
+        const updateISS = async () => {
+            try {
+                const data = await fetch(CONFIG.iss).then(r => r.json());
+                const issLat = data.latitude;
+                const issLon = data.longitude;
+                
+                // Calculate Distance (Haversine approximation)
+                const R = 6371; // Earth Radius km
+                const dLat = (issLat - userLat) * Math.PI / 180;
+                const dLon = (issLon - userLon) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(userLat * Math.PI / 180) * Math.cos(issLat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const dist = Math.round(R * c);
+                
+                ui.issDistance.textContent = `${dist.toLocaleString()} km away`;
+                ui.issLocation.textContent = `LAT ${issLat.toFixed(2)}  LON ${issLon.toFixed(2)}`;
+                
+                // Visual Radar Position (Scaled to radar div)
+                const scale = 60 / 10000; // 60px radius / 10000km
+                const y = Math.sin(dLon) * Math.cos(issLat * Math.PI/180);
+                const x = Math.cos(userLat * Math.PI/180) * Math.sin(issLat * Math.PI/180) -
+                          Math.sin(userLat * Math.PI/180) * Math.cos(issLat * Math.PI/180) * Math.cos(dLon);
+                const bearing = Math.atan2(y, x);
+                
+                const r = Math.min(dist * scale, 60); // Cap at edge
+                const cssX = 50 + (r/64 * 50) * Math.sin(bearing); // %
+                const cssY = 50 - (r/64 * 50) * Math.cos(bearing); // %
+                
+                ui.issMarker.style.top = `${cssY}%`;
+                ui.issMarker.style.left = `${cssX}%`;
+                ui.issMarker.classList.remove('opacity-0');
+
+            } catch(e) { console.log("ISS Fetch Failed"); }
+        };
+        
+        updateISS();
+        STATE.issInterval = setInterval(updateISS, 5000); // Poll every 5s
     }
 
     // New helper to get the data frame (Current vs Simulated)
@@ -1371,7 +1543,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const h = STATE.data.hourly;
         
-        // Construct a synthetic "current" object from hourly data
         return {
             temperature_2m: h.temperature_2m[targetIndex],
             relative_humidity_2m: h.relative_humidity_2m[targetIndex] || STATE.data.current.relative_humidity_2m,
@@ -1385,8 +1556,6 @@ document.addEventListener('DOMContentLoaded', () => {
             surface_pressure: STATE.data.current.surface_pressure,
             visibility: h.visibility ? h.visibility[targetIndex] : STATE.data.current.visibility,
             uv_index: STATE.data.current.uv_index, // Keep current for simplicity or approximate
-            
-            // Add property to indicate this is simulated
             _isSimulated: true,
             _targetTime: targetTime
         };
@@ -1394,12 +1563,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // SOLAR TRACKER LOGIC
     function updateSolarTracker(sunriseStr, sunsetStr, timezone, customTimeDate) {
-        // Convert API ISO strings to Date objects relative to current day
         const now = customTimeDate || new Date();
         const sunrise = new Date(sunriseStr);
         const sunset = new Date(sunsetStr);
-        
-        // Ensure accurate dates for calculation
         const nowTime = now.getTime();
         const riseTime = sunrise.getTime();
         const setTime = sunset.getTime();
@@ -1407,60 +1573,143 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.sunrise.textContent = sunrise.toLocaleTimeString('en-US',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hour12:false});
         ui.sunset.textContent = sunset.toLocaleTimeString('en-US',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hour12:false});
 
-        let pct = 0; // 0 = left (rise), 1 = right (set)
+        let pct = 0; 
         const isDay = nowTime >= riseTime && nowTime <= setTime;
         
         if (isDay) {
-            // Day: Move Sun
             pct = (nowTime - riseTime) / (setTime - riseTime);
             ui.markerSun.classList.remove('opacity-0');
             ui.markerMoon.classList.add('opacity-0');
         } else {
-            // Night: Move Moon (Inverse logic for visual loop)
-            // If before sunrise, it's late night. If after sunset, early night.
             ui.markerSun.classList.add('opacity-0');
             ui.markerMoon.classList.remove('opacity-0');
-            
-            // Simplified night tracking for visual loop (not astronomically perfect but visually consistent)
             const prevSunset = setTime - 86400000; 
             const nextSunrise = riseTime + 86400000; 
-            
             if(nowTime > setTime) {
-                // Evening until midnight
                  pct = (nowTime - setTime) / (nextSunrise - setTime); 
             } else {
-                // Midnight until sunrise
                  pct = (nowTime - (riseTime - 43200000)) / 43200000; 
             }
         }
-
-        // Clamp 0-1
         pct = Math.max(0, Math.min(1, pct));
-        
-        const angle = Math.PI - (pct * Math.PI); // PI -> 0
+        const angle = Math.PI - (pct * Math.PI);
         const r = 90;
         const cx = 100;
         const cy = 90;
-        
         const x = cx + r * Math.cos(angle);
         const y = cy - r * Math.sin(angle);
-        
         ui.solarMarker.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
+    function renderChart(hourly) {
+        if(STATE.chart) STATE.chart.destroy();
+        const ctx = ui.chartCanvas.getContext('2d');
+        const now = new Date().getHours();
+        const labels=[], data=[], rain=[];
+        let sumTemp = 0;
+        for(let i=0; i<24; i++) {
+            labels.push(`${(now+i)%24}:00`);
+            let t = hourly.temperature_2m[now+i];
+            if(!STATE.metric) t=t*1.8+32;
+            data.push(t); sumTemp += t;
+            rain.push(hourly.precipitation_probability[now+i]);
+        }
+        const avg = sumTemp / 24; const isHot = STATE.metric ? avg > 25 : avg > 77;
+        const color = isHot ? '#f97316' : '#22d3ee';
+        
+        STATE.chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [
+                { label:'Temp', data, borderColor: color, backgroundColor:(c)=>{const g=c.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,isHot?'rgba(249,115,22,0.3)':'rgba(34,211,238,0.3)');g.addColorStop(1,'rgba(0,0,0,0)');return g;}, borderWidth:2, tension:0.4, fill:true, yAxisID:'y'},
+                { label:'Rain %', data:rain, borderColor:'#3b82f6', borderDash:[5,5], borderWidth:1, pointRadius:0, fill:false, yAxisID:'y1' }
+            ]},
+            options: { 
+                responsive:true, 
+                maintainAspectRatio:false, 
+                resizeDelay: 0,
+                animation: false, 
+                interaction: { mode: 'index', intersect: false },
+                plugins:{
+                    legend:{display:false},
+                    tooltip: {
+                        backgroundColor: 'rgba(10, 14, 24, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) {
+                                    label += Math.round(context.parsed.y);
+                                    if(context.dataset.yAxisID === 'y') label += STATE.metric ? '°C' : '°F';
+                                    else label += '%';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    // SIMULATION LINE
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                xMin: STATE.timeOffset, // Match slider value
+                                xMax: STATE.timeOffset,
+                                borderColor: 'white',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    content: 'NOW',
+                                    display: true,
+                                    position: 'start'
+                                }
+                            }
+                        }
+                    }
+                }, 
+                scales:{x:{display:false}, y:{display:false}, y1:{display:false, min:0, max:100}} 
+            },
+            plugins: [{
+                id: 'simLine',
+                afterDraw: (chart) => {
+                    if (STATE.timeOffset > 0) {
+                        const ctx = chart.ctx;
+                        const xAxis = chart.scales.x;
+                        const yAxis = chart.scales.y;
+                        const x = xAxis.getPixelForValue(STATE.timeOffset);
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(x, yAxis.top);
+                        ctx.lineTo(x, yAxis.bottom);
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#a855f7';
+                        ctx.setLineDash([5, 5]);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }]
+        });
     }
 
     function renderUI() {
         const d = STATE.data;
         if (!d) return;
 
-        const cur = getRenderData(); // USE THE SIMULATED DATA
+        const cur = getRenderData();
         const isDay = cur.is_day === 1;
         
-        // Moon Phase (Always update widget)
+        // Moon Phase
         const phase = getMoonPhase(new Date());
         updateMoonWidget(phase);
 
         setAtmosphere(cur.weather_code, isDay);
-        
+        updateHistoryUI();
+
         // Main Icon update
         const meta = weatherMeta[cur.weather_code] || weatherMeta[0];
         ui.desc.textContent = meta.type.toUpperCase();
@@ -1476,26 +1725,21 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.tempMax.textContent = Math.round(mx)+'°'; ui.tempMin.textContent = Math.round(mn)+'°';
         document.title = `${d.cityName} • ${Math.round(t)}° | Aether`;
 
-        // Clock - Updated to handle Simulation Time
+        // Clock
         if(STATE.timer) clearInterval(STATE.timer);
         
         const updateClockVisuals = () => {
-             // If simulated, use target time. If live, use real time.
              const baseTime = (cur._isSimulated && cur._targetTime) ? cur._targetTime : new Date();
-             
              ui.time.textContent = baseTime.toLocaleTimeString('en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit',hour12:false});
-             
-             // For solar tracker, we pass the simulation time
              updateSolarTracker(d.daily.sunrise[0], d.daily.sunset[0], d.timezone, baseTime);
         };
         
         if (cur._isSimulated) {
-            updateClockVisuals(); // Just update once
+            updateClockVisuals();
             if(cur._targetTime) {
                 ui.date.textContent = cur._targetTime.toLocaleDateString('en-US',{timeZone:d.timezone,weekday:'short',month:'short',day:'numeric'});
             }
         } else {
-            // Live clock
             const tick = () => {
                 const now = new Date();
                 ui.time.textContent = now.toLocaleTimeString('en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit',hour12:false});
@@ -1505,7 +1749,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tick(); 
             STATE.timer = setInterval(tick,1000);
         }
-
 
         // GEAR ADVISOR LOGIC
         let gear = "Standard kit. Conditions normal.";
@@ -1601,116 +1844,42 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFavs();
     }
 
-    function renderChart(hourly) {
-        if(STATE.chart) STATE.chart.destroy();
-        const ctx = ui.chartCanvas.getContext('2d');
-        const now = new Date().getHours();
-        const labels=[], data=[], rain=[];
-        let sumTemp = 0;
-        for(let i=0; i<24; i++) {
-            labels.push(`${(now+i)%24}:00`);
-            let t = hourly.temperature_2m[now+i];
-            if(!STATE.metric) t=t*1.8+32;
-            data.push(t); sumTemp += t;
-            rain.push(hourly.precipitation_probability[now+i]);
-        }
-        const avg = sumTemp / 24; const isHot = STATE.metric ? avg > 25 : avg > 77;
-        const color = isHot ? '#f97316' : '#22d3ee';
-        
-        STATE.chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets: [
-                { label:'Temp', data, borderColor: color, backgroundColor:(c)=>{const g=c.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,isHot?'rgba(249,115,22,0.3)':'rgba(34,211,238,0.3)');g.addColorStop(1,'rgba(0,0,0,0)');return g;}, borderWidth:2, tension:0.4, fill:true, yAxisID:'y'},
-                { label:'Rain %', data:rain, borderColor:'#3b82f6', borderDash:[5,5], borderWidth:1, pointRadius:0, fill:false, yAxisID:'y1' }
-            ]},
-            options: { 
-                responsive:true, 
-                maintainAspectRatio:false, 
-                resizeDelay: 0,
-                animation: false, 
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                plugins:{
-                    legend:{display:false},
-                    tooltip: {
-                        backgroundColor: 'rgba(10, 14, 24, 0.9)',
-                        titleColor: '#fff',
-                        bodyColor: '#cbd5e1',
-                        borderColor: 'rgba(255,255,255,0.1)',
-                        borderWidth: 1,
-                        padding: 10,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    label += Math.round(context.parsed.y);
-                                    if(context.dataset.yAxisID === 'y') label += STATE.metric ? '°C' : '°F';
-                                    else label += '%';
-                                }
-                                return label;
-                            }
-                        }
-                    },
-                    // SIMULATION LINE
-                    annotation: {
-                        annotations: {
-                            line1: {
-                                type: 'line',
-                                xMin: STATE.timeOffset, // Match slider value
-                                xMax: STATE.timeOffset,
-                                borderColor: 'white',
-                                borderWidth: 2,
-                                borderDash: [5, 5],
-                                label: {
-                                    content: 'NOW',
-                                    display: true,
-                                    position: 'start'
-                                }
-                            }
-                        }
-                    }
-                }, 
-                scales:{x:{display:false}, y:{display:false}, y1:{display:false, min:0, max:100}} 
-            },
-            plugins: [{
-                // Custom plugin to draw the vertical line based on state offset
-                id: 'simLine',
-                afterDraw: (chart) => {
-                    if (STATE.timeOffset > 0) {
-                        const ctx = chart.ctx;
-                        const xAxis = chart.scales.x;
-                        const yAxis = chart.scales.y;
-                        const x = xAxis.getPixelForValue(STATE.timeOffset);
-                        
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.moveTo(x, yAxis.top);
-                        ctx.lineTo(x, yAxis.bottom);
-                        ctx.lineWidth = 2;
-                        ctx.strokeStyle = '#a855f7'; // Purple line for simulation
-                        ctx.setLineDash([5, 5]);
-                        ctx.stroke();
-                        ctx.restore();
-                    }
-                }
-            }]
-        });
-    }
-
     // Interaction
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(t => {
         t.onclick = () => {
-            tabs.forEach(b => b.classList.remove('active')); t.classList.add('active');
+            // Handle Cosmic Tab Switching
+            if (t.dataset.tab === 'celestial-tracker' || t.dataset.tab === 'cosmic-radar') {
+                const tracker = el('celestial-tracker');
+                const radar = el('cosmic-radar');
+                const btns = t.parentElement.querySelectorAll('.tab-btn');
+                
+                btns.forEach(b => b.classList.remove('active', 'text-white'));
+                t.classList.add('active', 'text-white');
+
+                if (t.dataset.tab === 'celestial-tracker') {
+                    tracker.style.opacity = '1'; tracker.style.pointerEvents = 'auto';
+                    radar.style.opacity = '0'; radar.style.pointerEvents = 'none';
+                } else {
+                    tracker.style.opacity = '0'; tracker.style.pointerEvents = 'none';
+                    radar.style.opacity = '1'; radar.style.pointerEvents = 'auto';
+                }
+                return;
+            }
+
+            // Handle Assistant Tab Switching
+            tabs.forEach(b => {
+                // Only remove active from assistant tabs
+                if (!b.parentElement.classList.contains('bg-black/20')) b.classList.remove('active');
+            });
+            
+            if (!t.parentElement.classList.contains('bg-black/20')) t.classList.add('active');
+
             ['tab-overview','tab-health','tab-activity'].forEach(id => {
                 const p = el(id);
-                if(id === t.dataset.tab) { p.style.opacity='1'; p.style.pointerEvents='auto'; } else { p.style.opacity='0'; p.style.pointerEvents='none'; }
+                if(p) {
+                    if(id === t.dataset.tab) { p.style.opacity='1'; p.style.pointerEvents='auto'; } else { p.style.opacity='0'; p.style.pointerEvents='none'; }
+                }
             });
         };
     });
