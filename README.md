@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/aether-v5-banner.png" alt="Aether Weather V5 Banner" width="100%">
+</p>
+
 # 🌐 **Aether Weather – Version 5.0 (Sentry)**
 
 ### *Professional × Cinematic × Sci-Fi × Developer-Focused × Highly Detailed*
