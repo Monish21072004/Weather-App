@@ -266,6 +266,22 @@
         .history-badge.warmer { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
         .history-badge.colder { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-color: rgba(59, 130, 246, 0.3); }
 
+        /* FORECAST CARD INTERACTION */
+        .forecast-row {
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        .forecast-row:hover {
+            transform: scale(1.02);
+            background: rgba(255,255,255,0.1);
+        }
+        .forecast-row.active-day {
+            background: rgba(6, 182, 212, 0.15);
+            border-color: rgba(6, 182, 212, 0.4);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+        }
+
     </style>
 </head>
 <body class="selection:bg-cyan-500/30">
@@ -668,8 +684,9 @@
 
                 <!-- 7-Day List -->
                 <div class="glass flex-1 min-h-[400px] flex flex-col">
-                    <div class="p-5 border-b border-white/5">
+                    <div class="p-5 border-b border-white/5 flex justify-between items-center">
                         <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-widest">7-Day Projection</h3>
+                        <button id="reset-day-btn" class="hidden text-[10px] text-red-300 border border-red-500/30 px-2 py-1 rounded uppercase font-bold hover:bg-red-500/20 transition-all">Back to Live</button>
                     </div>
                     <div class="flex-1 overflow-y-auto custom-scroll p-3 space-y-1" id="forecast-list">
                         <!-- Injected via JS -->
@@ -696,7 +713,7 @@
                 </div>
                 <input type="range" min="0" max="24" value="0" step="1" id="time-slider">
                 <div class="flex justify-between items-center mt-1">
-                     <span class="text-[10px] text-gray-500 font-mono">LIVE FEED</span>
+                     <span class="text-[10px] text-gray-500 font-mono" id="feed-status-label">LIVE FEED</span>
                      <span class="text-[10px] text-gray-500 font-mono">SIMULATION</span>
                 </div>
             </div>
@@ -727,6 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lightningBolts: [],
         favorites: JSON.parse(localStorage.getItem('aether_favs_v12')) || ['London', 'Tokyo', 'New York'],
         timeOffset: 0, // Hours from "now"
+        selectedDayIndex: 0, // 0 = Today, 1 = Tomorrow, etc.
         currentScanResults: [], // STORE SCAN RESULTS
         map: null, // LEAFLET MAP INSTANCE
         mapMarkers: [], // STORE MARKERS
@@ -818,13 +836,13 @@ document.addEventListener('DOMContentLoaded', () => {
         moonUI: el('moon-ui-container'), moonText: el('moon-text'),
         issLocation: el('iss-location'), issDistance: el('iss-distance'), issMarker: el('iss-marker'), // NEW: Cosmic UI
         forecast: el('forecast-list'), chartCanvas: el('chart-canvas'), radar: el('radar-frame'),
-        alert: el('alert-box'), alertMsg: el('alert-msg'),
+        alert: el('alert-box'), alertMsg: el('alert-msg'), resetDayBtn: el('reset-day-btn'),
         // Visuals
         sky: el('sky-gradient'), starCanvas: el('star-canvas'), aurora: el('aurora-layer'), celestial: el('celestial-container'),
         cloudsBack: el('cloud-layer-back'), cloudsFront: el('cloud-layer-front'), mist: el('mist-layer'),
         precipCanvas: el('precip-canvas'), lightning: el('lightning'),
         // Chronosphere
-        timeSlider: el('time-slider'), chronoLabel: el('chrono-label'), simBadge: el('sim-badge')
+        timeSlider: el('time-slider'), chronoLabel: el('chrono-label'), simBadge: el('sim-badge'), feedStatusLabel: el('feed-status-label')
     };
 
     // Initialize UI based on persistent state
@@ -833,24 +851,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CHRONOSPHERE LOGIC ---
     ui.timeSlider.addEventListener('input', (e) => {
         STATE.timeOffset = parseInt(e.target.value);
-        
-        // Update Label
-        if (STATE.timeOffset === 0) {
-            ui.chronoLabel.textContent = "Live Feed";
-            ui.chronoLabel.className = "text-xs font-bold tracking-widest uppercase text-cyan-400 mb-1";
-            ui.simBadge.classList.add('hidden');
-            document.body.classList.remove('simulation-active');
-        } else {
-            const futureTime = new Date(Date.now() + STATE.timeOffset * 60 * 60 * 1000);
-            ui.chronoLabel.textContent = `Simulating: +${STATE.timeOffset}h (${futureTime.getHours()}:00)`;
-            ui.chronoLabel.className = "text-xs font-bold tracking-widest uppercase text-purple-400 mb-1 animate-pulse";
-            ui.simBadge.classList.remove('hidden');
-            document.body.classList.add('simulation-active');
-        }
-
+        updateSimulationState();
         renderUI(); // Re-render everything with new time offset
     });
 
+    // Helper to update text/badges based on time/day
+    function updateSimulationState() {
+        // Calculate the future time based on SELECTED DAY + SLIDER OFFSET
+        const now = new Date();
+        const baseDate = new Date();
+        baseDate.setDate(now.getDate() + STATE.selectedDayIndex);
+        const futureTime = new Date(baseDate.getTime() + STATE.timeOffset * 60 * 60 * 1000);
+        
+        // Is it "Live"? (Today, 0 offset)
+        const isLive = STATE.selectedDayIndex === 0 && STATE.timeOffset === 0;
+
+        if (isLive) {
+            ui.chronoLabel.textContent = "Live Feed";
+            ui.chronoLabel.className = "text-xs font-bold tracking-widest uppercase text-cyan-400 mb-1";
+            ui.simBadge.classList.add('hidden');
+            ui.resetDayBtn.classList.add('hidden');
+            ui.feedStatusLabel.textContent = "LIVE FEED";
+            ui.feedStatusLabel.className = "text-[10px] text-cyan-400 font-mono font-bold animate-pulse";
+            document.body.classList.remove('simulation-active');
+        } else {
+            // Build simulation label
+            let label = "";
+            if (STATE.selectedDayIndex > 0) {
+                 const dayName = futureTime.toLocaleDateString('en-US', { weekday: 'long' });
+                 label = `Simulating: ${dayName} @ ${futureTime.getHours()}:00`;
+                 ui.resetDayBtn.classList.remove('hidden');
+            } else {
+                 label = `Simulating: +${STATE.timeOffset}h (${futureTime.getHours()}:00)`;
+            }
+
+            ui.chronoLabel.textContent = label;
+            ui.chronoLabel.className = "text-xs font-bold tracking-widest uppercase text-purple-400 mb-1 animate-pulse";
+            ui.simBadge.classList.remove('hidden');
+            ui.simBadge.textContent = STATE.selectedDayIndex > 0 ? "Forecast Simulation" : "Future Simulation";
+            
+            ui.feedStatusLabel.textContent = "SIMULATED DATA";
+            ui.feedStatusLabel.className = "text-[10px] text-purple-400 font-mono font-bold";
+            
+            document.body.classList.add('simulation-active');
+        }
+    }
 
     // --- MODAL LOGIC (GLOBAL & LOCAL) ---
     ui.exploreBtn.onclick = () => {
@@ -1407,13 +1452,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset slider on new fetch
         ui.timeSlider.value = 0;
         STATE.timeOffset = 0;
-        
-        ui.simBadge.classList.add('hidden');
-        document.body.classList.remove('simulation-active');
-        ui.chronoLabel.textContent = "Live Feed";
+        STATE.selectedDayIndex = 0; // Reset selected day to Today
+        updateSimulationState(); // Reset UI state
 
         try {
             // UPDATED FETCH URL: Added 'is_day', 'wind_speed_10m', 'relative_humidity_2m' to hourly for simulation
+            // NOTE: forecast_days=8 is crucial for the 7-day selection feature
             const [w, a] = await Promise.all([
                 fetch(`${CONFIG.weather}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,uv_index,dew_point_2m,rain,showers,snowfall&hourly=temperature_2m,weather_code,precipitation_probability,is_day,wind_speed_10m,wind_direction_10m,relative_humidity_2m,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=8`).then(r=>r.json()),
                 fetch(`${CONFIG.aqi}?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,nitrogen_dioxide,ozone`).then(r=>r.json())
@@ -1520,19 +1564,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // New helper to get the data frame (Current vs Simulated)
     function getRenderData() {
         if (!STATE.data) return null;
-        if (STATE.timeOffset === 0) return STATE.data.current;
+        
+        // If viewing Today (Live) and offset is 0
+        if (STATE.timeOffset === 0 && STATE.selectedDayIndex === 0) return STATE.data.current;
 
-        // Simulation Mode
-        const nowIndex = new Date().getHours(); 
+        // Simulation Mode (Future Hour OR Future Day)
         
-        // Find current hour index
+        // 1. Determine Target Time
+        // Offset for days: selectedDayIndex * 24 hours
+        // Offset for slider: timeOffset hours
+        const hourOffsetTotal = (STATE.selectedDayIndex * 24) + STATE.timeOffset;
+        
         const now = new Date();
-        const targetTime = new Date(now.getTime() + STATE.timeOffset * 3600000);
+        const targetTime = new Date(now.getTime() + hourOffsetTotal * 3600000);
         
-        // Find index in STATE.data.hourly.time
+        // 2. Find closest index in STATE.data.hourly.time
         let targetIndex = 0;
         let minDiff = Infinity;
         
+        // We assume hourly data covers enough range (192 hours)
         STATE.data.hourly.time.forEach((t, i) => {
              const diff = Math.abs(new Date(t).getTime() - targetTime.getTime());
              if (diff < minDiff) {
@@ -1557,7 +1607,8 @@ document.addEventListener('DOMContentLoaded', () => {
             visibility: h.visibility ? h.visibility[targetIndex] : STATE.data.current.visibility,
             uv_index: STATE.data.current.uv_index, // Keep current for simplicity or approximate
             _isSimulated: true,
-            _targetTime: targetTime
+            _targetTime: targetTime,
+            _targetIndex: targetIndex // Helpful for charts
         };
     }
 
@@ -1604,15 +1655,28 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderChart(hourly) {
         if(STATE.chart) STATE.chart.destroy();
         const ctx = ui.chartCanvas.getContext('2d');
+        
+        // Calculate Start Hour for the Chart
+        // Ideally starts at the beginning of the SELECTED DAY + Current Time
         const now = new Date().getHours();
+        const startOffset = now + (STATE.selectedDayIndex * 24);
+
         const labels=[], data=[], rain=[];
         let sumTemp = 0;
+        
+        // Show 24 hours from the start point
         for(let i=0; i<24; i++) {
-            labels.push(`${(now+i)%24}:00`);
-            let t = hourly.temperature_2m[now+i];
+            const idx = startOffset + i;
+            if (idx >= hourly.time.length) break; // Safety check
+
+            // Format label: Hour:00
+            const hour = new Date(hourly.time[idx]).getHours();
+            labels.push(`${hour}:00`);
+            
+            let t = hourly.temperature_2m[idx];
             if(!STATE.metric) t=t*1.8+32;
             data.push(t); sumTemp += t;
-            rain.push(hourly.precipitation_probability[now+i]);
+            rain.push(hourly.precipitation_probability[idx]);
         }
         const avg = sumTemp / 24; const isHot = STATE.metric ? avg > 25 : avg > 77;
         const color = isHot ? '#f97316' : '#22d3ee';
@@ -1657,7 +1721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         annotations: {
                             line1: {
                                 type: 'line',
-                                xMin: STATE.timeOffset, // Match slider value
+                                xMin: STATE.timeOffset, // Match slider value relative to the start of the chart
                                 xMax: STATE.timeOffset,
                                 borderColor: 'white',
                                 borderWidth: 2,
@@ -1676,25 +1740,43 @@ document.addEventListener('DOMContentLoaded', () => {
             plugins: [{
                 id: 'simLine',
                 afterDraw: (chart) => {
-                    if (STATE.timeOffset > 0) {
+                    // Only draw if within 24h range
+                    if (STATE.timeOffset >= 0 && STATE.timeOffset < 24) {
                         const ctx = chart.ctx;
                         const xAxis = chart.scales.x;
                         const yAxis = chart.scales.y;
-                        const x = xAxis.getPixelForValue(STATE.timeOffset);
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.moveTo(x, yAxis.top);
-                        ctx.lineTo(x, yAxis.bottom);
-                        ctx.lineWidth = 2;
-                        ctx.strokeStyle = '#a855f7';
-                        ctx.setLineDash([5, 5]);
-                        ctx.stroke();
-                        ctx.restore();
+                        const x = xAxis.getPixelForValue(STATE.timeOffset); // Slider value matches chart index 0-23
+                        
+                        if (x) {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.moveTo(x, yAxis.top);
+                            ctx.lineTo(x, yAxis.bottom);
+                            ctx.lineWidth = 2;
+                            ctx.strokeStyle = '#a855f7';
+                            ctx.setLineDash([5, 5]);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
                     }
                 }
             }]
         });
     }
+
+    // Handle clicking a day in the 7-day list
+    window.selectDay = (index) => {
+        STATE.selectedDayIndex = index;
+        STATE.timeOffset = 0; // Reset slider to "Current Time" of that day
+        ui.timeSlider.value = 0;
+        updateSimulationState();
+        renderUI();
+    };
+    
+    // Reset button logic
+    ui.resetDayBtn.onclick = () => {
+        window.selectDay(0);
+    };
 
     function renderUI() {
         const d = STATE.data;
@@ -1719,7 +1801,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.city.textContent = d.cityName;
 
         // Temps
-        let t=cur.temperature_2m, fl=cur.apparent_temperature, mx=d.daily.temperature_2m_max[0], mn=d.daily.temperature_2m_min[0];
+        let t=cur.temperature_2m, fl=cur.apparent_temperature;
+        
+        // For Min/Max, we need to grab from daily array based on selectedDayIndex
+        let mx=d.daily.temperature_2m_max[STATE.selectedDayIndex];
+        let mn=d.daily.temperature_2m_min[STATE.selectedDayIndex];
+        
         if(!STATE.metric) { const f=c=>c*1.8+32; t=f(t); fl=f(fl); mx=f(mx); mn=f(mn); }
         ui.temp.textContent = Math.round(t); ui.feels.textContent = Math.round(fl)+'°';
         ui.tempMax.textContent = Math.round(mx)+'°'; ui.tempMin.textContent = Math.round(mn)+'°';
@@ -1731,14 +1818,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateClockVisuals = () => {
              const baseTime = (cur._isSimulated && cur._targetTime) ? cur._targetTime : new Date();
              ui.time.textContent = baseTime.toLocaleTimeString('en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit',hour12:false});
-             updateSolarTracker(d.daily.sunrise[0], d.daily.sunset[0], d.timezone, baseTime);
+             
+             // Update sunrise/set for the selected day
+             ui.date.textContent = baseTime.toLocaleDateString('en-US',{timeZone:d.timezone,weekday:'short',month:'short',day:'numeric'});
+             
+             updateSolarTracker(
+                 d.daily.sunrise[STATE.selectedDayIndex], 
+                 d.daily.sunset[STATE.selectedDayIndex], 
+                 d.timezone, 
+                 baseTime
+             );
         };
         
         if (cur._isSimulated) {
             updateClockVisuals();
-            if(cur._targetTime) {
-                ui.date.textContent = cur._targetTime.toLocaleDateString('en-US',{timeZone:d.timezone,weekday:'short',month:'short',day:'numeric'});
-            }
         } else {
             const tick = () => {
                 const now = new Date();
@@ -1823,17 +1916,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Forecast List
         ui.forecast.innerHTML = '';
-        for(let i=1; i<8; i++) {
+        // Only show 0 to 7. 0 is Today.
+        for(let i=0; i<8; i++) {
             const code = d.daily.weather_code[i];
             const m = weatherMeta[code] || weatherMeta[0];
             let mx = d.daily.temperature_2m_max[i], mn = d.daily.temperature_2m_min[i];
             if(!STATE.metric) { mx=mx*1.8+32; mn=mn*1.8+32; }
-            const day = new Date(d.daily.time[i]).toLocaleDateString('en-US',{weekday:'short'});
+            const dateObj = new Date(d.daily.time[i]);
+            let day = dateObj.toLocaleDateString('en-US',{weekday:'short'});
+            if (i === 0) day = "Today";
+
             const pop = d.daily.precipitation_probability_max[i];
             
+            // Interaction: Check if selected
+            const isActive = i === STATE.selectedDayIndex;
+            const activeClass = isActive ? 'active-day bg-cyan-500/10 border-cyan-500/30' : 'bg-white/5 hover:bg-white/10 border-white/5';
+
             const row = document.createElement('div');
-            row.className = "flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5";
-            row.innerHTML = `<div class="w-12"><div class="font-bold text-gray-300 text-sm">${day}</div>${pop>20?`<div class="text-[9px] text-blue-400 font-bold">${pop}%</div>`:''}</div>
+            row.className = `forecast-row flex items-center justify-between p-3 rounded-xl transition-colors border ${activeClass}`;
+            row.onclick = () => window.selectDay(i);
+            
+            row.innerHTML = `<div class="w-16"><div class="font-bold text-gray-300 text-sm">${day}</div>${pop>20?`<div class="text-[9px] text-blue-400 font-bold">${pop}% Rain</div>`:''}</div>
             <span class="material-symbols-rounded text-cyan-400 text-xl">${m.type==='clear'?'sunny':m.type==='rain'?'rainy':m.type==='cloudy'?'partly_cloudy_day':'cloud'}</span>
             <div class="text-sm font-mono font-bold text-right"><span class="text-white">${Math.round(mx)}°</span> <span class="text-gray-500">/ ${Math.round(mn)}°</span></div>`;
             ui.forecast.appendChild(row);
