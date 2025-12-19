@@ -28,10 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
         currentScanResults: [], // STORE SCAN RESULTS
         currentScanResults: [], // STORE SCAN RESULTS
         globe: null, // GLOBE INSTANCE
+        lastFetch: 0,
+        globe: null, // GLOBE INSTANCE
         isMapView: false,
+        viewMode: 'global', // 'global' | 'local'
+        historyData: null, // NEW: Store history comparison
         historyData: null, // NEW: Store history comparison
         issInterval: null, // NEW: Store ISS polling
-        userLocation: null // NEW: Persist user location permission/coords
+        userLocation: null, // NEW: Persist user location permission/coords
+        quakes: [], // NEW: Planetary Defense Data
+        achievements: [], // NEW: Scout Protocol
+        stats: { highestTemp: -100, lowestTemp: 100, maxWind: 0 } // NEW: Persistent Stats
     };
 
     // Fallback Cities for Random Selection (Startup)
@@ -366,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const elem = document.getElementById('explore-map');
 
         // High-Def / Tile Mode
-        STATE.globe = Globe()
+        const g = Globe()
             (elem)
             // Use Blue Marble High-Res for reliable Satellite look
             .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
@@ -456,8 +463,106 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 el.innerHTML = `<span class="material-symbols-rounded text-[14px] ${colorClass} filter drop-shadow-[0_0_5px_currentColor]">${icon}</span> <span class="tracking-wide">${d.name}</span>`;
                 return el;
+            })
+            // 3. COSMIC LINK: ISS LAYER
+            .customLayerData([])
+            .customThreeObject(d => {
+                // ISS MODEL (Simple Geometric Representation)
+                const group = new THREE.Group();
+
+                // Main Module (Cylinder)
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.2, 0.2, 1.5, 8),
+                    new THREE.MeshLambertMaterial({ color: 0xcccccc })
+                );
+                body.rotation.z = Math.PI / 2;
+                group.add(body);
+
+                // Solar Panels (Planes)
+                const panelGeo = new THREE.BoxGeometry(0.1, 2.5, 0.5);
+                const panelMat = new THREE.MeshLambertMaterial({ color: 0x3b82f6, emissive: 0x1d4ed8, emissiveIntensity: 0.5 });
+
+                const leftPanel = new THREE.Mesh(panelGeo, panelMat);
+                leftPanel.position.x = -1.2;
+                group.add(leftPanel);
+
+                const rightPanel = new THREE.Mesh(panelGeo, panelMat);
+                rightPanel.position.x = 1.2;
+                group.add(rightPanel);
+
+                // Glow Sprite
+                const canvas = document.createElement('canvas');
+                canvas.width = 32; canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+                grad.addColorStop(0, 'rgba(239, 68, 68, 1)'); // Red Core
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 32, 32);
+                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, blending: THREE.AdditiveBlending }));
+                sprite.scale.set(4, 4, 4);
+                group.add(sprite);
+
+                return group;
+            })
+            .customThreeObjectUpdate((obj, d) => {
+                if (STATE.globe) Object.assign(obj.position, STATE.globe.getCoords(d.lat, d.lng, d.alt));
+                obj.lookAt(new THREE.Vector3(0, 0, 0)); // Orient towards earth center? No, standard orientation
             });
 
+        STATE.globe = g; // Assign to global state
+
+        // Add Lights (Defensive Check for THREE)
+        if (typeof THREE !== 'undefined' && g.scene()) {
+            try {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                g.scene().add(ambientLight);
+
+                // SUN SYNC LIGHT
+                STATE.sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+                STATE.sunLight.position.set(100, 10, 50); // Initial
+                g.scene().add(STATE.sunLight);
+            } catch (e) {
+                console.warn("Lighting Init Failed:", e);
+            }
+        }
+
+        // --- COSMIC LINK: ORBITAL MECHANICS ---
+        window.updateGlobeSunPosition = function () {
+            if (!STATE.globe || !STATE.sunLight) return;
+
+            // Calculate Sun Position based on UTC time + Slider Offset
+            // Simple approximation: Sun moves around Y axis 15deg per hour
+            const now = new Date();
+            const baseHour = now.getUTCHours() + (now.getUTCMinutes() / 60);
+            const totalOffset = baseHour + STATE.timeOffset; // 0-48 range effectively
+
+            // Earth rotates 360 deg in 24h -> 15 deg/hr
+            // To simulate sun moving, we rotate the light around the scene
+            // Noon UTC = Sun at (0, 0, 1)? Depends on texture alignment.
+            // Example: Blue Marble usually has Prime Meridian at Z?
+            // Let's just create a rotation logic.
+
+            // Lon 0 = Sun at X=0, Z=Positive?
+            // We'll calculate simple orbital position:
+            const angle = (totalOffset / 24) * Math.PI * 2; // Radians
+            const r = 150; // Distance
+
+            // Sun orbits around Y axis (incorrect astronomically but good for Day/Night visual)
+            // Actually, we want the sun fixed and the earth rotating?
+            // Globe.GL handles interaction by rotating the camera/scene.
+            // If we move the light, the terminator moves.
+
+            // Z is Prime Meridian?
+            // Let's assume Sun is at -Z at 12:00 UTC (Noon at London).
+            // Actually, at 12:00 UTC, Sun is directly above approx 0 Lon.
+
+            // Rotation:
+            const x = Math.sin(angle - Math.PI) * r; // Offset by PI to visual match
+            const z = Math.cos(angle - Math.PI) * r;
+
+            STATE.sunLight.position.set(x, 10, z);
+        }
         // Initial Zoom/Pos
         STATE.globe.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
 
@@ -473,46 +578,82 @@ document.addEventListener('DOMContentLoaded', () => {
         controls.addEventListener('start', () => { controls.autoRotate = false; });
     }
 
+    // --- PLANETARY DEFENSE: LOGIC ---
+    // Safely render points without crashing
     function renderGlobePoints() {
         if (!STATE.globe) return;
 
-        // Map scan results to Globe points
-        const points = STATE.currentScanResults.map(p => {
+        // Map scan results to Globe points (with fallbacks)
+        const points = (STATE.currentScanResults || []).map(p => {
             const temp = Math.round(STATE.metric ? p.temperature_2m : p.temperature_2m * 1.8 + 32);
-            const code = p.weather_code;
-            // Determine Type for visual model
-            let type = 'cloud';
-            if (code <= 1) type = 'clear';
-            if (code >= 51 && code <= 67) type = 'rain';
-            if (code >= 71 && code <= 86) type = 'snow';
-            if (code >= 95) type = 'storm';
-
-            // Color for Rings/Fallback
-            let c = '#9ca3af';
-            if (type === 'clear') c = '#fbbf24';
-            if (type === 'rain') c = '#3b82f6';
-            if (type === 'snow') c = '#cffafe';
-            if (type === 'storm') c = '#a855f7';
-
             return {
                 lat: p.lat,
                 lng: p.lon,
                 name: `${p.name} (${temp}°)`,
-                weatherType: type,
+                weatherType: getMarkerIconName(p.weather_code, p.is_day) === 'sunny' ? 'clear' : 'cloud', // Simplified mapping for visual model
                 isDay: p.is_day === 1,
-                color: c
+                color: p.color || '#9ca3af'
             };
         });
 
-        STATE.globe.objectsData([]); // Clear prev
         STATE.globe.objectsData(points);
-
-        // Pass data to HTML layer for labels
-        STATE.globe.htmlElementsData([]);
         STATE.globe.htmlElementsData(points);
 
-        // Add rings for visual flair
-        STATE.globe.ringsData(points.map(p => ({ lat: p.lat, lng: p.lng, color: p.color })));
+        // Add rings for visual flair (Weather + Quakes)
+        const weatherRings = points.map(p => ({ lat: p.lat, lng: p.lng, color: p.color }));
+
+        // Only show Quakes/Volcanoes if in Global Mode
+        let quakeRings = [];
+        let volcanoRings = [];
+
+        if (STATE.viewMode === 'global') {
+            // 1. Quakes
+            quakeRings = (STATE.quakes || []).map(q => {
+                if (!q || typeof q.lat !== 'number') return null;
+                return {
+                    lat: q.lat,
+                    lng: q.lng,
+                    color: q.mag >= 6 ? '#ef4444' : '#fbbf24', // Red for >6, Yellow for <6
+                    maxR: q.mag * 3,
+                    propagationSpeed: q.mag * 0.5,
+                    repeatPeriod: Math.max(200, 2000 - (q.mag * 200))
+                };
+            }).filter(r => r !== null);
+
+            // 2. Volcanoes (Static Active Monitor)
+            volcanoRings = VOLCANOES.map(v => ({
+                lat: v.lat,
+                lng: v.lon,
+                color: '#f97316', // Orange
+                maxR: 5, // Smaller, constant
+                propagationSpeed: 0.5,
+                repeatPeriod: 1500
+            }));
+        }
+
+        STATE.globe.ringsData([...weatherRings, ...quakeRings, ...volcanoRings]);
+    }
+
+    // --- PLANETARY DEFENSE: QUAKE FEED ---
+    async function fetchQuakes() {
+        try {
+            // USGS Feed: M4.5+ in last 24h (Significant events only)
+            const res = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
+            const data = await res.json();
+
+            STATE.quakes = data.features.map(f => ({
+                lat: f.geometry.coordinates[1],
+                lng: f.geometry.coordinates[0],
+                mag: f.properties.mag,
+                place: f.properties.place,
+                time: f.properties.time
+            }));
+
+            renderGlobePoints(); // Refresh visual
+            console.log(`Planetary Defense: ${STATE.quakes.length} seismic events detected.`);
+        } catch (e) {
+            console.error("Seismic Feed Offline", e);
+        }
     }
 
     ui.mapBtn.onclick = () => {
@@ -530,8 +671,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Initialize
             if (!STATE.globe) initGlobe();
 
-            // Render Points
-            setTimeout(renderGlobePoints, 100);
+            // Render Points (Increased delay to ensure Globe scene is ready)
+            setTimeout(renderGlobePoints, 500);
 
         } else {
             ui.exploreContent.classList.remove('hidden');
@@ -615,11 +756,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // SMART SAMPLING SCAN (UPDATED)
     async function scanGlobalWeather() {
+        STATE.viewMode = 'global'; // Set Mode
         ui.exploreLoading.classList.remove('hidden');
         ui.exploreLoading.innerHTML = '<div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div><p class="text-sm text-gray-400 font-mono animate-pulse">Scanning Climate Sectors...</p>';
         ui.exploreContent.classList.add('hidden');
         ui.exploreContent.innerHTML = '';
         ui.exploreMap.classList.add('hidden'); // Hide map while loading
+
+        // CLEAR SCAN BUFFER
+        STATE.currentScanResults = [];
+        if (STATE.globe) {
+            STATE.globe.objectsData([]);
+            STATE.globe.htmlElementsData([]);
+        }
 
         // Helper to pick N random items from an array
         const pickRandom = (arr, n) => [...arr].sort(() => 0.5 - Math.random()).slice(0, n);
@@ -658,6 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // LOCAL SCAN
     async function scanLocalWeather(lat, lon) {
+        STATE.viewMode = 'local'; // Set Mode
         ui.exploreLoading.classList.remove('hidden');
         ui.exploreLoading.innerHTML = '<div class="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-4"></div><p class="text-sm text-gray-400 font-mono animate-pulse">Scanning Local Sectors...</p>';
         ui.exploreContent.classList.add('hidden');
@@ -677,6 +827,14 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: "Sector West", lat: lat, lon: lon - offset },
             { name: "Sector North-West", lat: lat + offset, lon: lon - offset },
         ];
+
+        // CLEAR PREVIOUS RESULTS TO PREVENT DUPLICATION
+        STATE.currentScanResults = [];
+        // Force Clear Globe Visuals Immediately
+        if (STATE.globe) {
+            STATE.globe.objectsData([]);
+            STATE.globe.htmlElementsData([]);
+        }
 
         try {
             const promises = sectors.map(sec =>
@@ -1115,7 +1273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <stop offset="100%" stop-color="${mainColor}" stop-opacity="0.1"/>
                 </linearGradient>
             </defs>
-            
+
             <!-- Rotating Outer Ring (HUD) -->
             <g transform-origin="24 24">
                 <circle cx="24" cy="24" r="22" stroke="${mainColor}" stroke-width="1" fill="none" stroke-dasharray="10 20" opacity="0.5"/>
@@ -1134,7 +1292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <circle cx="24" cy="24" r="8" fill="url(#grad-${mood})" filter="url(#glow-${mood})">
                 <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite"/>
             </circle>
-            
+
             <!-- Central Icon (Fixed) -->
             <g transform="scale(0.6) translate(16,16)">
                 ${icons[iconType] || icons.sun}
@@ -1254,6 +1412,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                     Math.cos(userLat * Math.PI / 180) * Math.cos(issLat * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
                 const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                // Update ISS on Globe
+                if (STATE.globe && typeof lat === 'number' && typeof lon === 'number') {
+                    const issData = [{ lat: lat, lng: lon, alt: 0.5, name: "ISS" }];
+                    STATE.globe.customLayerData(issData);
+
+                    // Update Sun Position
+                    if (typeof updateGlobeSunPosition === 'function') updateGlobeSunPosition();
+                }
+
                 const dist = Math.round(R * c);
 
                 ui.issDistance.textContent = `${dist.toLocaleString()} km away`;
@@ -1649,6 +1816,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (updateSurvivalMetrics) updateSurvivalMetrics(cur.temperature_2m, cur.wind_speed_10m || 0, 0, isDay);
 
+        // CHECK ACHIEVEMENTS
+        if (typeof checkAchievements === 'function' && d) checkAchievements(d);
+
+        // Update Sun Position (Instant feedback)
+        if (typeof updateGlobeSunPosition === 'function') updateGlobeSunPosition();
+
 
         // Main Icon update
         const meta = weatherMeta[cur.weather_code] || weatherMeta[0];
@@ -1741,6 +1914,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update Survival & AI Logs
         updateSurvivalMetrics(cur.temperature_2m, cur.wind_speed_10m, cur.weather_code, cur.is_day === 1);
         updateAvatar(cur.weather_code, cur.temperature_2m, cur.is_day === 1);
+        if (typeof updateMissionDashboard === 'function') updateMissionDashboard();
 
         // --- IDEA 7 & 8: CONTEXT AWARE DATA SWAP (Marine > Pollen > Terrain > Pressure) ---
 
@@ -1987,6 +2161,34 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     ui.btnC.onclick = () => setUnit(true); ui.btnF.onclick = () => setUnit(false);
 
+    // --- SCOUT GUIDE LOGIC ---
+    const guideHelpers = {
+        btn: document.getElementById('help-btn'),
+        modal: document.getElementById('guide-modal'),
+        close: document.getElementById('close-guide'),
+        content: document.getElementById('guide-content')
+    };
+
+    if (guideHelpers.btn) {
+        const toggleGuide = (show) => {
+            if (show) {
+                guideHelpers.modal.classList.remove('opacity-0', 'pointer-events-none');
+                guideHelpers.content.classList.remove('scale-95');
+                guideHelpers.content.classList.add('scale-100');
+            } else {
+                guideHelpers.modal.classList.add('opacity-0', 'pointer-events-none');
+                guideHelpers.content.classList.remove('scale-100');
+                guideHelpers.content.classList.add('scale-95');
+            }
+        };
+
+        guideHelpers.btn.onclick = () => toggleGuide(true);
+        guideHelpers.close.onclick = () => toggleGuide(false);
+        guideHelpers.modal.onclick = (e) => {
+            if (e.target === guideHelpers.modal) toggleGuide(false);
+        };
+    }
+
     // IDEA 6: GEOLOCATION FALLBACK (PERSISTENT PERMISSION)
     ui.gpsBtn.onclick = () => {
         // 1. Check if we already have permission/location
@@ -2062,7 +2264,113 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('aether_favs_v12', JSON.stringify(STATE.favorites)); renderFavs();
     };
 
-    // --- STARTUP LOGIC ---
+    // --- PLANETARY DEFENSE: ACTIVE VOLCANOES ---
+    const VOLCANOES = [
+        { name: "Mauna Loa", lat: 19.472, lon: -155.592 },
+        { name: "Kilauea", lat: 19.402, lon: -155.286 },
+        { name: "Mount Etna", lat: 37.751, lon: 14.993 },
+        { name: "Mount Merapi", lat: -7.540, lon: 110.446 },
+        { name: "Popocatépetl", lat: 19.022, lon: -98.627 },
+        { name: "Sakurajima", lat: 31.593, lon: 130.657 },
+        { name: "Mount Rainier", lat: 46.852, lon: -121.760 }, // High threat
+        { name: "Mount Vesuvius", lat: 40.822, lon: 14.428 },
+        { name: "Cotopaxi", lat: -0.677, lon: -78.436 },
+        { name: "Krakatoa", lat: -6.102, lon: 105.423 }
+    ];
+
+    // --- SCOUT PROTOCOL: ACHIEVEMENT ENGINE ---
+    const ACHIEVEMENTS = [
+        { id: 'frostbite', icon: 'ac_unit', title: 'Frostbite', desc: 'Scan a sector below -10°C', condition: (d) => d.current.temperature_2m < -10 },
+        { id: 'inferno', icon: 'local_fire_department', title: 'Inferno', desc: 'Scan a sector above 40°C', condition: (d) => d.current.temperature_2m > 40 },
+        { id: 'storm_chaser', icon: 'cyclone', title: 'Storm Chaser', desc: 'Scan winds above 80 km/h', condition: (d) => d.current.wind_speed_10m > 80 },
+        { id: 'pressure_drop', icon: 'compress', title: 'Deep Dive', desc: 'Scan pressure below 980 hPa', condition: (d) => d.current.surface_pressure < 980 },
+        { id: 'night_owl', icon: 'nights_stay', title: 'Night Owl', desc: 'Perform a scan at midnight local time', condition: (d) => d.current.is_day === 0 && new Date(d.current.time).getHours() === 0 }
+    ];
+
+    function checkAchievements(data) {
+        if (!STATE.achievements) STATE.achievements = []; // Init
+
+        ACHIEVEMENTS.forEach(ach => {
+            if (!STATE.achievements.includes(ach.id)) {
+                if (ach.condition(data)) {
+                    STATE.achievements.push(ach.id);
+                    showAchievementToast(ach);
+                    CONF.playSound('ui_unlock'); // Hypothetical sound hook
+                    localStorage.setItem('aether_achievements', JSON.stringify(STATE.achievements));
+                }
+            }
+        });
+    }
+
+    function showAchievementToast(ach) {
+        // Calculate Offset for Stacking
+        const existing = document.querySelectorAll('.achievement-toast').length;
+        const offset = existing * 90; // 90px spacing
+
+        const toast = document.createElement('div');
+        toast.className = "achievement-toast fixed bottom-4 right-4 glass p-4 rounded-xl border border-yellow-400/30 flex items-center gap-4 shadow-[0_0_30px_rgba(250,204,21,0.2)] transform translate-y-20 opacity-0 transition-all duration-500 z-50 pointer-events-none";
+        toast.style.bottom = `${16 + offset}px`; // Dynamic Bottom
+        toast.innerHTML = `
+            <div class="w-12 h-12 rounded-full bg-yellow-400/20 flex items-center justify-center text-yellow-400">
+                <span class="material-symbols-rounded text-2xl">${ach.icon}</span>
+            </div>
+            <div>
+                <div class="text-[10px] uppercase font-bold text-yellow-400 tracking-widest">Achievement Unlocked</div>
+                <div class="text-white font-bold text-sm">${ach.title}</div>
+                <div class="text-xs text-gray-400">${ach.desc}</div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+
+        // Animate In
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-20', 'opacity-0');
+        });
+
+        // Remove
+        setTimeout(() => {
+            toast.classList.add('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.remove(), 500);
+        }, 5000);
+    }
+
+    function updateMissionDashboard() {
+        const d = document.getElementById('mission-dashboard');
+        if (!d) return;
+
+        // 1. Defense Status
+        const quakeCount = (STATE.quakes || []).length;
+
+        // 2. Achievements
+        const unlocked = STATE.achievements || [];
+        const badgesHtml = ACHIEVEMENTS.map(a => {
+            const isUnlocked = unlocked.includes(a.id);
+            const color = isUnlocked ? 'text-yellow-400 bg-yellow-400/20 border-yellow-400/40' : 'text-gray-600 bg-white/5 border-transparent grayscale opacity-50';
+            return `
+            <div class="flex flex-col items-center justify-center p-2 rounded border ${color} w-full text-center" title="${a.title}: ${a.desc}">
+                <span class="material-symbols-rounded text-lg mb-1">${a.icon}</span>
+                <span class="text-[8px] font-bold uppercase">${a.title}</span>
+            </div>`;
+        }).join('');
+
+        d.innerHTML = `
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-red-500/10 border border-red-500/30 p-2 rounded flex flex-col items-center">
+                    <span class="text-[9px] text-red-400 uppercase font-bold">Planetary Defense</span>
+                    <span class="text-xs text-white"><strong class="text-red-400">${quakeCount}</strong> Active Threats</span>
+                </div>
+                <div class="bg-cyan-500/10 border border-cyan-500/30 p-2 rounded flex flex-col items-center">
+                    <span class="text-[9px] text-cyan-400 uppercase font-bold">Cosmic Link</span>
+                    <span class="text-xs text-white">ISS Orbit: <strong>Sync</strong></span>
+                </div>
+            </div>
+            <div class="mb-2 text-[9px] text-gray-400 uppercase font-bold tracking-widest">Scout Badges</div>
+            <div class="grid grid-cols-3 gap-2">
+                ${badgesHtml}
+            </div>
+        `;
+    }
+
     function initApp() {
         // FIND AVATAR CONTAINER DYNAMICALLY (For Idea 10)
         // We look for the smart_toy icon in the material symbols spans
@@ -2075,6 +2383,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // CHECK CACHE FIRST
+        // CHECK CACHE FIRST
+        const achs = localStorage.getItem('aether_achievements');
+        if (achs) STATE.achievements = JSON.parse(achs);
+
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
             try {
@@ -2111,5 +2423,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Start
     initApp();
+    fetchQuakes(); // Initialize Seismic Array
 
 });
